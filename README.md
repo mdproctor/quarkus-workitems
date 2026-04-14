@@ -146,7 +146,8 @@ curl -X PUT "http://localhost:8080/tarkus/workitems/{id}/complete?actor=alice" \
 - **Claim and completion deadlines** — `claimDeadline` and `expiresAt`; both configurable with per-application defaults.
 - **Pluggable escalation policies** — `notify`, `reassign`, or `auto-reject` on deadline breach; implement `EscalationPolicy` for custom behaviour (Slack alerts, PagerDuty, etc.).
 - **CDI event emission** — `WorkItemLifecycleEvent` fired on every transition; any CDI bean can observe without coupling to Tarkus internals.
-- **Quarkus-Flow integration** — `HumanTaskFlowBridge` suspends a workflow until a human resolves the WorkItem, then resumes with the resolution JSON.
+- **Quarkus-Flow DSL (`TarkusFlow`)** — extend `TarkusFlow` instead of `Flow` to get the `tarkus()` DSL method alongside `function()`, `agent()`, and other quarkus-flow task types. The `tarkus()` builder creates a WorkItem and returns a `Uni<String>` that resolves when a human or agent acts on it via REST.
+- **Ledger module (`quarkus-tarkus-ledger`)** — optional accountability module. Add it as a dependency to activate: decision context snapshots at every transition, a tamper-evident SHA-256 hash chain, peer attestation stamps, and EigenTrust reputation scoring. The core extension is completely unchanged when the module is absent.
 - **Storage SPI** — `WorkItemRepository` and `AuditEntryRepository` interfaces; default JPA (PostgreSQL/H2) implementations, overridable via `@Alternative @Priority(1)`.
 - **Native image support** — target: GraalVM 25 native image (validation in Phase 8).
 
@@ -173,7 +174,8 @@ All properties are prefixed with `quarkus.tarkus`.
 | `quarkus-tarkus` | Core runtime — WorkItem model, JPA storage, REST API, lifecycle engine, CDI events |
 | `quarkus-tarkus-deployment` | Build-time processor — feature registration, native image config |
 | `quarkus-tarkus-testing` | `InMemoryWorkItemRepository` + `InMemoryAuditEntryRepository` for unit tests without a datasource |
-| `quarkus-tarkus-flow` | Quarkus-Flow integration — `HumanTaskFlowBridge`, `WorkItemFlowEventListener` |
+| `quarkus-tarkus-flow` | Quarkus-Flow integration — `TarkusFlow` base class, `TarkusTaskBuilder` DSL, `HumanTaskFlowBridge`, `WorkItemFlowEventListener` |
+| `quarkus-tarkus-ledger` | Optional accountability module — command/event ledger, SHA-256 hash chain, peer attestation, EigenTrust reputation scoring. Zero impact on the core extension when absent. |
 
 Future modules (not yet released): `quarkus-tarkus-casehub`, `quarkus-tarkus-qhorus`, `quarkus-tarkus-mongodb`, `quarkus-tarkus-redis`.
 
@@ -206,9 +208,10 @@ Quarkus Tarkus is part of the Quarkus Native AI Agent Ecosystem, which also incl
 
 ## Documentation
 
-- [**API Reference**](docs/api-reference.md) — all 13 REST endpoints, request/response schemas, status enums, error formats, CDI event types, inbox query parameters
-- [**Integration Guide**](docs/integration-guide.md) — standalone REST, Quarkus-Flow workflow suspension, CDI event observation, custom escalation policies, unit testing without a datasource
+- [**API Reference**](docs/api-reference.md) — all REST endpoints, request/response schemas, status enums, error formats, CDI event types, inbox query parameters, ledger and trust-score endpoints
+- [**Integration Guide**](docs/integration-guide.md) — standalone REST, Quarkus-Flow DSL (`TarkusFlow`), CDI event observation, custom escalation policies, unit testing without a datasource, ledger module setup
 - [**Design Specification**](docs/specs/2026-04-14-tarkus-design.md) — full data model, storage SPI, lifecycle engine, future considerations
+- [**Ledger Design**](docs/specs/ledger-design.md) — ledger module architecture: command/event model, hash chain, attestation, EigenTrust reputation
 - [**Implementation Tracker**](docs/DESIGN.md) — component structure, domain model, services, build roadmap
 
 ---

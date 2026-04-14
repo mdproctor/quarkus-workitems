@@ -439,3 +439,193 @@ The `WorkItemLifecycleEvent` record fields: `type`, `source` (`/tarkus/workitems
 |---|---|---|
 | `404 Not Found` | WorkItem with the given `id` does not exist | `{"error": "WorkItem not found: {id}"}` |
 | `409 Conflict` | Transition is not valid for the current status | `{"error": "Cannot {action} WorkItem in status: {STATUS}"}` |
+
+---
+
+## Ledger API (quarkus-tarkus-ledger)
+
+These endpoints are only present when `quarkus-tarkus-ledger` is on the classpath. They activate automatically via CDI — no configuration required beyond adding the dependency.
+
+---
+
+### GET /tarkus/workitems/{id}/ledger
+
+Returns all ledger entries for a WorkItem in sequence order, each with its peer attestations embedded.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `LedgerEntryResponse[]`
+
+**Error:** `404 Not Found` if the WorkItem does not exist.
+
+```bash
+curl http://localhost:8080/tarkus/workitems/a1b2c3d4-e5f6-7890-abcd-ef1234567890/ledger
+```
+
+---
+
+### PUT /tarkus/workitems/{id}/ledger/provenance
+
+Sets the source entity provenance on the creation ledger entry (sequence number 1). Call this immediately after creating a WorkItem from an external system (Quarkus-Flow, CaseHub, Qhorus) to record which entity originated the WorkItem.
+
+**Path parameter:** `id` — UUID
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `sourceEntityId` | string | yes | Identifier of the external entity, e.g. `"workflow-instance-abc123"` |
+| `sourceEntityType` | string | yes | Type of the external entity, e.g. `"Flow:WorkflowInstance"` |
+| `sourceEntitySystem` | string | yes | System owning the entity, e.g. `"quarkus-flow"` |
+
+**Response:** `200 OK`
+
+**Errors:**
+- `404 Not Found` — WorkItem does not exist, or no creation ledger entry found.
+- `409 Conflict` — Provenance is already set on the creation entry.
+
+```bash
+curl -X PUT "http://localhost:8080/tarkus/workitems/{id}/ledger/provenance" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "sourceEntityId": "workflow-instance-abc123",
+    "sourceEntityType": "Flow:WorkflowInstance",
+    "sourceEntitySystem": "quarkus-flow"
+  }'
+```
+
+---
+
+### POST /tarkus/workitems/{id}/ledger/{entryId}/attestations
+
+Posts a peer attestation on a specific ledger entry. Requires `quarkus.tarkus.ledger.attestations.enabled=true` (the default when the module is present).
+
+**Path parameters:**
+- `id` — WorkItem UUID
+- `entryId` — ledger entry UUID to attest
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `attestorId` | string | yes | Identity of the actor providing the attestation |
+| `attestorType` | ActorType | yes | `HUMAN`, `AGENT`, or `SYSTEM` |
+| `verdict` | AttestationVerdict | yes | Formal judgment on the ledger entry |
+| `evidence` | string | no | Optional supporting evidence (JSON or free text) |
+| `confidence` | double | yes | Confidence level in the range 0.0–1.0 |
+
+**AttestationVerdict values:**
+
+| Value | Meaning |
+|---|---|
+| `SOUND` | The decision was correct and well-reasoned |
+| `FLAGGED` | The decision warrants further review |
+| `ENDORSED` | The attestor positively endorses the decision |
+| `CHALLENGED` | The attestor disputes the decision |
+
+**Response:** `201 Created`
+
+**Errors:**
+- `404 Not Found` — ledger entry does not exist or does not belong to the given WorkItem.
+- `409 Conflict` — attestations are disabled (`quarkus.tarkus.ledger.attestations.enabled=false`).
+
+```bash
+curl -X POST "http://localhost:8080/tarkus/workitems/{id}/ledger/{entryId}/attestations" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "attestorId": "alice",
+    "attestorType": "HUMAN",
+    "verdict": "SOUND",
+    "evidence": "{\"notes\": \"Decision was well-documented\"}",
+    "confidence": 0.95
+  }'
+```
+
+---
+
+### GET /tarkus/actors/{actorId}/trust
+
+Returns the computed EigenTrust-inspired trust score for an actor. Requires `quarkus.tarkus.ledger.trust-score.enabled=true`. Scores are computed by a nightly scheduled job; the endpoint returns `404` until the first computation run completes.
+
+**Path parameter:** `actorId` — the actor's identity string (e.g. `"alice"`, `"agent-007"`)
+
+**Response:** `200 OK`
+**Body:** `ActorTrustScoreResponse`
+
+**Errors:**
+- `404 Not Found` — trust scoring is disabled, or no score has been computed yet for this actor.
+
+```bash
+curl http://localhost:8080/tarkus/actors/alice/trust
+```
+
+---
+
+## Ledger Schemas
+
+### LedgerEntryResponse
+
+Returned by `GET /tarkus/workitems/{id}/ledger` as an array.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Ledger entry UUID |
+| `workItemId` | UUID | WorkItem this entry belongs to |
+| `sequenceNumber` | int | Position in the per-WorkItem ledger (1-based) |
+| `entryType` | LedgerEntryType | Whether this is a `COMMAND`, `EVENT`, or other record type |
+| `commandType` | string | The actor's expressed intent; `null` for pure events |
+| `eventType` | string | The observable fact after execution; `null` for pure commands |
+| `actorId` | string | Identity of the actor |
+| `actorType` | ActorType | `HUMAN`, `AGENT`, or `SYSTEM` |
+| `actorRole` | string | Functional role of the actor; `null` if not set |
+| `planRef` | string | Policy or procedure reference governing this action; `null` if not set |
+| `rationale` | string | The actor's stated basis for the decision; `null` if not set |
+| `decisionContext` | string | JSON snapshot of the WorkItem state at this transition; `null` if `decision-context.enabled=false` |
+| `evidence` | string | Structured evidence; `null` if `evidence.enabled=false` |
+| `detail` | string | Free-text or JSON transition detail (reason, resolution, delegation target); `null` if not applicable |
+| `causedByEntryId` | UUID | FK to the entry that caused this one; `null` if not applicable |
+| `correlationId` | string | OpenTelemetry trace ID; `null` if not set |
+| `sourceEntityId` | string | External entity identifier; `null` until provenance is set |
+| `sourceEntityType` | string | Type of the external entity; `null` until provenance is set |
+| `sourceEntitySystem` | string | System owning the external entity; `null` until provenance is set |
+| `previousHash` | string | SHA-256 digest of the preceding entry; `null` for entry 1, or if hash chain disabled |
+| `digest` | string | SHA-256 digest of this entry's canonical content; `null` if hash chain disabled |
+| `occurredAt` | ISO-8601 instant | When this entry was recorded |
+| `attestations` | LedgerAttestationResponse[] | Peer attestations on this entry (empty array if none) |
+
+---
+
+### LedgerAttestationResponse
+
+Embedded in `LedgerEntryResponse.attestations`.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Attestation UUID |
+| `ledgerEntryId` | UUID | Ledger entry this attestation targets |
+| `workItemId` | UUID | WorkItem this attestation belongs to (denormalized) |
+| `attestorId` | string | Identity of the attestor |
+| `attestorType` | ActorType | `HUMAN`, `AGENT`, or `SYSTEM` |
+| `attestorRole` | string | Functional role of the attestor; `null` if not set |
+| `verdict` | AttestationVerdict | `SOUND`, `FLAGGED`, `ENDORSED`, or `CHALLENGED` |
+| `evidence` | string | Supporting evidence; `null` if not provided |
+| `confidence` | double | Confidence level in the range 0.0–1.0 |
+| `occurredAt` | ISO-8601 instant | When the attestation was recorded |
+
+---
+
+### ActorTrustScoreResponse
+
+Returned by `GET /tarkus/actors/{actorId}/trust`.
+
+| Field | Type | Description |
+|---|---|---|
+| `actorId` | string | The actor's identity string |
+| `actorType` | ActorType | `HUMAN`, `AGENT`, or `SYSTEM` |
+| `trustScore` | double | Computed trust score in [0.0, 1.0]; neutral prior is 0.5 |
+| `decisionCount` | int | Total number of `EVENT` ledger entries attributed to this actor |
+| `overturnedCount` | int | Number of decisions that received at least one negative attestation |
+| `attestationPositive` | int | Total count of positive attestations (`SOUND` or `ENDORSED`) received |
+| `attestationNegative` | int | Total count of negative attestations (`FLAGGED` or `CHALLENGED`) received |
+| `lastComputedAt` | ISO-8601 instant | When this score was last computed |

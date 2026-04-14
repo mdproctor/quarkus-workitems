@@ -1,5 +1,6 @@
 package io.quarkiverse.tarkus.ledger.service;
 
+import java.util.Map;
 import java.util.Optional;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -111,71 +112,44 @@ public class LedgerEventCapture {
                 wi.expiresAt != null ? "\"" + wi.expiresAt + "\"" : "null");
     }
 
-    /**
-     * Derive the command type (actor intent) from the CloudEvents-style event type string.
-     *
-     * @param eventType the fully-qualified event type, e.g. {@code "io.quarkiverse.tarkus.workitem.completed"}
-     * @return a PascalCase command name, or {@code null} if not mappable
-     */
+    /** Single source of truth for event suffix → (commandType, actorRole) mapping. */
+    private static final Map<String, String[]> EVENT_META = Map.ofEntries(
+            Map.entry("created", new String[] { "CreateWorkItem", "WorkItemCreated", "Initiator" }),
+            Map.entry("assigned", new String[] { "ClaimWorkItem", "WorkItemAssigned", "Claimant" }),
+            Map.entry("started", new String[] { "StartWorkItem", "WorkItemStarted", "Assignee" }),
+            Map.entry("completed", new String[] { "CompleteWorkItem", "WorkItemCompleted", "Resolver" }),
+            Map.entry("rejected", new String[] { "RejectWorkItem", "WorkItemRejected", "Resolver" }),
+            Map.entry("delegated", new String[] { "DelegateWorkItem", "WorkItemDelegated", "Delegator" }),
+            Map.entry("released", new String[] { "ReleaseWorkItem", "WorkItemReleased", "Assignee" }),
+            Map.entry("suspended", new String[] { "SuspendWorkItem", "WorkItemSuspended", "Assignee" }),
+            Map.entry("resumed", new String[] { "ResumeWorkItem", "WorkItemResumed", "Assignee" }),
+            Map.entry("cancelled", new String[] { "CancelWorkItem", "WorkItemCancelled", "Administrator" }),
+            Map.entry("expired", new String[] { "ExpireWorkItem", "WorkItemExpired", "System" }),
+            Map.entry("escalated", new String[] { "EscalateWorkItem", "WorkItemEscalated", "System" }));
+
+    private static final int META_COMMAND = 0;
+    private static final int META_EVENT = 1;
+    private static final int META_ROLE = 2;
+
+    private String eventSuffix(final String eventType) {
+        if (eventType == null)
+            return null;
+        final String[] parts = eventType.split("\\.");
+        return parts[parts.length - 1];
+    }
+
     private String deriveCommandType(final String eventType) {
-        if (eventType == null) {
-            return null;
-        }
-        final String[] parts = eventType.split("\\.");
-        final String last = parts[parts.length - 1];
-        return switch (last) {
-            case "created" -> "CreateWorkItem";
-            case "assigned" -> "ClaimWorkItem";
-            case "started" -> "StartWorkItem";
-            case "completed" -> "CompleteWorkItem";
-            case "rejected" -> "RejectWorkItem";
-            case "delegated" -> "DelegateWorkItem";
-            case "released" -> "ReleaseWorkItem";
-            case "suspended" -> "SuspendWorkItem";
-            case "resumed" -> "ResumeWorkItem";
-            case "cancelled" -> "CancelWorkItem";
-            case "expired" -> "ExpireWorkItem";
-            case "escalated" -> "EscalateWorkItem";
-            default -> null;
-        };
+        final String[] meta = EVENT_META.get(eventSuffix(eventType));
+        return meta != null ? meta[META_COMMAND] : null;
     }
 
-    /**
-     * Derive the event type (observable fact) from the CloudEvents-style event type string.
-     *
-     * @param eventType the fully-qualified event type, e.g. {@code "io.quarkiverse.tarkus.workitem.completed"}
-     * @return a PascalCase event name such as {@code "WorkItemCompleted"}, or {@code null} if input is null
-     */
     private String deriveEventType(final String eventType) {
-        if (eventType == null) {
-            return null;
-        }
-        final String[] parts = eventType.split("\\.");
-        final String last = parts[parts.length - 1];
-        final String capitalised = last.substring(0, 1).toUpperCase() + last.substring(1);
-        return "WorkItem" + capitalised;
+        final String[] meta = EVENT_META.get(eventSuffix(eventType));
+        return meta != null ? meta[META_EVENT] : null;
     }
 
-    /**
-     * Derive the functional role of the actor from the CloudEvents-style event type string.
-     *
-     * @param eventType the fully-qualified event type
-     * @return a role label such as {@code "Resolver"} or {@code "Delegator"}, or {@code null} if input is null
-     */
     private String deriveActorRole(final String eventType) {
-        if (eventType == null) {
-            return null;
-        }
-        final String[] parts = eventType.split("\\.");
-        final String last = parts[parts.length - 1];
-        return switch (last) {
-            case "created" -> "Initiator";
-            case "assigned" -> "Claimant";
-            case "completed", "rejected" -> "Resolver";
-            case "delegated" -> "Delegator";
-            case "cancelled" -> "Administrator";
-            case "expired", "escalated" -> "System";
-            default -> "Assignee";
-        };
+        final String[] meta = EVENT_META.get(eventSuffix(eventType));
+        return meta != null ? meta[META_ROLE] : "Assignee";
     }
 }

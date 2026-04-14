@@ -1,6 +1,6 @@
 # Quarkus Tarkus — Integration Guide
 
-This guide covers four integration patterns: standalone REST, Quarkus-Flow workflow suspension, CDI lifecycle event observation, and custom escalation policies. A fifth section covers using the testing module for unit tests without a datasource.
+This guide covers seven integration patterns: standalone REST, Quarkus-Flow workflow suspension, CDI lifecycle event observation, custom escalation policies, unit testing without a datasource, the optional ledger module, and the `TarkusFlow` DSL for embedding WorkItem steps directly in workflow definitions.
 
 ---
 
@@ -73,7 +73,7 @@ The response is a `WorkItemResponse[]` ordered by creation time. Frontends use `
 
 ## Section 2: Quarkus-Flow Integration
 
-The `quarkus-tarkus-flow` module suspends a Quarkus-Flow workflow until a human resolves a WorkItem, then resumes the workflow with the resolution JSON.
+The `quarkus-tarkus-flow` module suspends a Quarkus-Flow workflow until a human resolves a WorkItem, then resumes the workflow with the resolution JSON. See [Section 7](#section-7-quarkus-flow-dsl-tarkusflow) for the higher-level `TarkusFlow` DSL, which is the preferred approach for new workflows.
 
 ### Dependency
 
@@ -91,36 +91,42 @@ This pulls in `quarkus-tarkus` transitively.
 
 1. A flow task function calls `HumanTaskFlowBridge.requestApproval()` (or `requestGroupApproval()`).
 2. The bridge creates a WorkItem via `WorkItemService` and registers a `CompletableFuture` in `PendingWorkItemRegistry`, keyed by the WorkItem's UUID.
-3. The flow suspends on the returned `CompletableFuture`.
+3. The method returns a `Uni<String>` wrapping that `CompletableFuture`; Quarkus-Flow suspends the workflow on the `Uni`.
 4. A human sees the WorkItem in `GET /inbox`, claims it, and completes it via `PUT /{id}/complete`.
 5. `WorkItemService` fires a `WorkItemLifecycleEvent` with type `io.quarkiverse.tarkus.workitem.completed`.
 6. `WorkItemFlowEventListener` observes the event and calls `PendingWorkItemRegistry.complete()`, resolving the `CompletableFuture` with the resolution JSON.
-7. The flow resumes with the resolution as its output.
+7. The `Uni` completes and the flow resumes with the resolution as its output.
 
-If the WorkItem is rejected, the future completes exceptionally with `WorkItemResolutionException`. If it is cancelled, the future also fails.
+If the WorkItem is rejected or cancelled, the `Uni` fails with `WorkItemResolutionException`.
 
 ### Direct assignee example
 
 ```java
 @ApplicationScoped
-public class DocumentApprovalFlow {
+public class DocumentApprovalFlow extends Flow {
 
     @Inject
     HumanTaskFlowBridge humanTask;
 
-    public CompletableFuture<String> requestDocumentReview(String documentId) {
-        return humanTask.requestApproval(
-            "Review document for publication",              // title
-            "Check for accuracy and approve or reject.",   // description
-            "alice",                                       // direct assignee
-            WorkItemPriority.HIGH,                         // priority
-            "{\"documentId\": \"" + documentId + "\"}"    // payload (JSON context)
-        );
+    @Override
+    public Workflow descriptor() {
+        return workflow("document-approval")
+            .tasks(
+                function("request-review", (String documentId) ->
+                    humanTask.requestApproval(
+                        "Review document for publication",              // title
+                        "Check for accuracy and approve or reject.",   // description
+                        "alice",                                       // direct assignee
+                        WorkItemPriority.HIGH,                         // priority
+                        "{\"documentId\": \"" + documentId + "\"}"    // payload (JSON context)
+                    ), String.class)
+            )
+            .build();
     }
 }
 ```
 
-The `CompletableFuture<String>` resolves with the resolution JSON that `alice` submits when completing the WorkItem:
+The `Uni<String>` resolves with the resolution JSON that `alice` submits when completing the WorkItem:
 
 ```bash
 curl -X PUT "http://localhost:8080/tarkus/workitems/{id}/complete?actor=alice" \
@@ -128,29 +134,20 @@ curl -X PUT "http://localhost:8080/tarkus/workitems/{id}/complete?actor=alice" \
   -d '{"resolution": "{\"approved\": true, \"publishAt\": \"2026-04-15T09:00:00Z\"}"}'
 ```
 
-The flow then receives `"{\"approved\": true, \"publishAt\": \"2026-04-15T09:00:00Z\"}"` as its result.
+The flow then receives `"{\"approved\": true, \"publishAt\": \"2026-04-15T09:00:00Z\"}"` as its output.
 
 ### Group routing example
 
 Use `requestGroupApproval()` when you want any member of a group to be able to act, rather than a specific individual:
 
 ```java
-@ApplicationScoped
-public class ContractApprovalFlow {
-
-    @Inject
-    HumanTaskFlowBridge humanTask;
-
-    public CompletableFuture<String> requestLegalReview(String contractId) {
-        return humanTask.requestGroupApproval(
-            "Legal review required",
-            "Review contract " + contractId + " before signing.",
-            "legal-team,senior-managers",   // comma-separated candidate groups
-            WorkItemPriority.CRITICAL,
-            "{\"contractId\": \"" + contractId + "\"}"
-        );
-    }
-}
+humanTask.requestGroupApproval(
+    "Legal review required",
+    "Review contract before signing.",
+    "legal-team,senior-managers",   // comma-separated candidate groups
+    WorkItemPriority.CRITICAL,
+    "{\"contractId\": \"" + contractId + "\"}"
+)
 ```
 
 The WorkItem appears in the inbox for all members of `legal-team` and `senior-managers`. The first to claim it becomes the assignee; others no longer see it in their active inbox (though `GET /inbox?candidateGroup=legal-team` will still return it until claimed).
@@ -159,15 +156,13 @@ The WorkItem appears in the inbox for all members of `legal-team` and `senior-ma
 
 ```java
 humanTask.requestApproval(title, description, assignee, priority, payload)
-    .thenApply(resolution -> {
+    .onItem().transform(resolution -> {
         // WorkItem was COMPLETED — resolution is the JSON string
         return parseDecision(resolution);
     })
-    .exceptionally(ex -> {
-        if (ex.getCause() instanceof WorkItemResolutionException wre) {
-            // WorkItem was REJECTED or CANCELLED
-            log.warnf("WorkItem %s not resolved: %s", wre.getWorkItemId(), wre.getMessage());
-        }
+    .onFailure(WorkItemResolutionException.class).recoverWithItem(ex -> {
+        // WorkItem was REJECTED or CANCELLED
+        log.warnf("WorkItem %s not resolved: %s", ex.getWorkItemId(), ex.getMessage());
         return null;
     });
 ```
@@ -402,3 +397,182 @@ This approach gives instant test execution — no Quarkus boot, no H2, no Flyway
 - `findExpired()` returns items in `PENDING`, `ASSIGNED`, `IN_PROGRESS`, or `SUSPENDED` whose `expiresAt` is in the past.
 - `findUnclaimedPastDeadline()` returns `PENDING` items whose `claimDeadline` is in the past.
 - Candidate group matching uses exact comma-separated token comparison — `"bob"` does not match `"bobby"`.
+
+---
+
+## Section 6: Using the Ledger Module (quarkus-tarkus-ledger)
+
+The ledger module adds an optional accountability layer to Tarkus: a per-WorkItem command/event ledger with a SHA-256 hash chain, decision context snapshots, peer attestations, and EigenTrust reputation scoring. The core extension is completely unchanged when the module is absent.
+
+### Dependency
+
+```xml
+<dependency>
+  <groupId>io.quarkiverse.tarkus</groupId>
+  <artifactId>quarkus-tarkus-ledger</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+### What activates automatically
+
+No code changes are needed. The ledger module registers a CDI observer on `WorkItemLifecycleEvent`. When the module is on the classpath:
+
+- Every WorkItem lifecycle transition writes a `LedgerEntry` with `commandType`, `eventType`, a JSON snapshot of the WorkItem state at that moment (`decisionContext`), and a SHA-256 digest chained to the previous entry's digest.
+- The ledger REST endpoints become available automatically.
+
+### Ledger endpoints
+
+```bash
+# Retrieve all ledger entries for a WorkItem (each with its attestations)
+GET /tarkus/workitems/{id}/ledger
+
+# Record the source entity that created this WorkItem (called by CaseHub, Quarkus-Flow, etc.)
+PUT /tarkus/workitems/{id}/ledger/provenance
+
+# Post a peer attestation on a specific ledger entry
+POST /tarkus/workitems/{id}/ledger/{entryId}/attestations
+
+# Get the computed trust score for an actor (requires trust-score.enabled=true)
+GET /tarkus/actors/{actorId}/trust
+```
+
+See the [Ledger API section of the API Reference](api-reference.md#ledger-api-quarkus-tarkus-ledger) for full schemas.
+
+### Configuration
+
+All ledger configuration is under `quarkus.tarkus.ledger`. Defaults when the module is present:
+
+```properties
+# Master switch — set false to disable all ledger writes (default: true)
+quarkus.tarkus.ledger.enabled=true
+
+# SHA-256 hash chain across entries for this WorkItem (default: true)
+quarkus.tarkus.ledger.hash-chain.enabled=true
+
+# JSON snapshot of WorkItem state at each transition (default: true)
+quarkus.tarkus.ledger.decision-context.enabled=true
+
+# Structured evidence fields per entry (default: false — opt-in)
+quarkus.tarkus.ledger.evidence.enabled=false
+
+# Peer attestation endpoint active (default: true)
+quarkus.tarkus.ledger.attestations.enabled=true
+
+# EigenTrust reputation scoring — nightly computation (default: false — opt-in)
+quarkus.tarkus.ledger.trust-score.enabled=false
+
+# Trust-score-based routing suggestions via CDI events (default: false)
+quarkus.tarkus.ledger.trust-score.routing-enabled=false
+```
+
+### Enabling trust scores
+
+Trust scores require accumulated ledger history to be meaningful. Enable only after the system has been running long enough for scores to stabilise:
+
+```properties
+quarkus.tarkus.ledger.trust-score.enabled=true
+```
+
+A nightly scheduled job then computes EigenTrust-inspired scores from ledger history. After the first computation:
+
+```bash
+GET /tarkus/actors/alice/trust
+```
+
+Returns the actor's current trust score, decision count, overturned count, and attestation tallies.
+
+### Setting provenance
+
+When an external system (Quarkus-Flow, CaseHub) creates a WorkItem on behalf of a process, call the provenance endpoint immediately after creation to link the WorkItem back to its source:
+
+```bash
+curl -X PUT "http://localhost:8080/tarkus/workitems/{id}/ledger/provenance" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "sourceEntityId": "workflow-instance-abc123",
+    "sourceEntityType": "Flow:WorkflowInstance",
+    "sourceEntitySystem": "quarkus-flow"
+  }'
+```
+
+This sets `sourceEntityId`, `sourceEntityType`, and `sourceEntitySystem` on the initial `CREATED` ledger entry. Returns `409 Conflict` if provenance is already set.
+
+---
+
+## Section 7: Quarkus-Flow DSL (TarkusFlow)
+
+The `quarkus-tarkus-flow` module provides `TarkusFlow` — a base class that extends `Flow` with a `tarkus()` DSL method. This is the preferred way to embed WorkItem suspension steps in a workflow definition, giving a uniform style alongside `function()`, `agent()`, and other quarkus-flow task types.
+
+### Extending TarkusFlow
+
+```java
+@ApplicationScoped
+public class DocumentApprovalWorkflow extends TarkusFlow {
+
+    @Override
+    public Workflow descriptor() {
+        return workflow("document-approval")
+            .tasks(
+                tarkus("legal-review")
+                    .title("Legal review required")
+                    .candidateGroups("legal-team")
+                    .priority(WorkItemPriority.HIGH)
+                    .payloadFrom((DocumentDraft d) -> d.toJson())
+                    .buildTask(DocumentDraft.class)
+            )
+            .build();
+    }
+}
+```
+
+`tarkus("legal-review")` returns a `TarkusTaskBuilder`. Call:
+
+| Method | Required | Description |
+|---|---|---|
+| `.title(String)` | yes | Human-readable title shown in the inbox |
+| `.description(String)` | no | What the human needs to do |
+| `.assigneeId(String)` | no | Direct assignee; mutually exclusive with `candidateGroups` |
+| `.candidateGroups(String)` | no | Comma-separated groups eligible to claim |
+| `.priority(WorkItemPriority)` | no | Defaults to `NORMAL` |
+| `.payloadFrom(Function<T, String>)` | no | Extracts JSON context from the step's input |
+| `.buildTask(Class<T>)` | yes | Builds the `FuncTaskConfigurer`; throws if `title` not set |
+
+When the workflow reaches the `tarkus()` step:
+1. Tarkus creates a WorkItem with the configured parameters.
+2. The step returns a `Uni<String>` that suspends the workflow.
+3. A human or agent sees the WorkItem in `GET /inbox`, claims it, and completes it via `PUT /{id}/complete`.
+4. The `Uni` resolves with the resolution JSON from the human, which becomes the next task's input.
+
+If the WorkItem is rejected or cancelled, the `Uni` fails with `WorkItemResolutionException` and the workflow fails that step.
+
+### Using HumanTaskFlowBridge directly
+
+When you need programmatic control or cannot extend `TarkusFlow`, inject `HumanTaskFlowBridge` into any `Flow` subclass:
+
+```java
+@ApplicationScoped
+public class ApprovalWorkflow extends Flow {
+
+    @Inject
+    HumanTaskFlowBridge tarkus;
+
+    @Override
+    public Workflow descriptor() {
+        return workflow("contract-approval")
+            .tasks(
+                function("await-legal-approval", (ContractInput input) ->
+                    tarkus.requestGroupApproval(
+                        "Legal review required",
+                        "Review contract before signing.",
+                        "legal-team,senior-managers",
+                        WorkItemPriority.CRITICAL,
+                        input.toJson()
+                    ), ContractInput.class)
+            )
+            .build();
+    }
+}
+```
+
+Both `requestApproval()` (direct assignee) and `requestGroupApproval()` (candidate groups) return `Uni<String>`. The returned string is the resolution JSON submitted by the human via `PUT /{id}/complete`.

@@ -7,5 +7,5 @@ target/
 .claude/
 # Stray Maven artifacts produced when mvn runs from project root
 META-INF/
-application.properties
+/application.properties
 db/

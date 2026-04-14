@@ -34,9 +34,11 @@ Maven multi-module layout following Quarkiverse conventions:
 | Runtime | `quarkus-tarkus` | Core — WorkItem model, storage SPI, JPA defaults, service, REST API, lifecycle engine |
 | Deployment | `quarkus-tarkus-deployment` | Build-time processor — feature registration, native config |
 | Testing | `quarkus-tarkus-testing` | `InMemoryWorkItemRepository` — no datasource needed for unit tests |
-| *(future)* | `quarkus-tarkus-flow` | Quarkus-Flow `TaskExecutorFactory` SPI integration |
-| *(future)* | `quarkus-tarkus-casehub` | CaseHub `WorkerRegistry` adapter |
-| *(future)* | `quarkus-tarkus-qhorus` | Qhorus MCP tools |
+| Flow | `quarkus-tarkus-flow` | Quarkus-Flow integration — `TarkusFlow` DSL base class, `HumanTaskFlowBridge`, `WorkItemFlowEventListener` |
+| Ledger | `quarkus-tarkus-ledger` | Optional accountability module — command/event ledger, SHA-256 hash chain, peer attestation, EigenTrust reputation. Zero core impact when absent. |
+| Integration Tests | `integration-tests` | Black-box `@QuarkusIntegrationTest` suite and native image validation |
+| *(future)* | `quarkus-tarkus-casehub` | CaseHub `WorkerRegistry` adapter (blocked: CaseHub not ready) |
+| *(future)* | `quarkus-tarkus-qhorus` | Qhorus MCP tools (blocked: Qhorus not ready) |
 | *(future)* | `quarkus-tarkus-mongodb` | MongoDB-backed `WorkItemRepository` |
 | *(future)* | `quarkus-tarkus-redis` | Redis-backed `WorkItemRepository` |
 
@@ -195,14 +197,16 @@ Consuming app owns all datasource config.
 
 | Phase | Status | What |
 |---|---|---|
-| **1 — Core data model** | ✅ Complete | Storage SPI interfaces + JPA defaults + InMemory (testing module); WorkItem + AuditEntry entities; Flyway V1; WorkItemService; TarkusConfig |
-| **2 — REST API** | ⬜ Pending | WorkItemResource — all lifecycle endpoints |
-| **3 — Lifecycle engine** | ⬜ Pending | ExpiryCleanupJob, EscalationPolicy SPI + defaults |
-| **4 — CloudEvents** | ⬜ Pending | Event emission on all transitions |
-| **5 — Quarkus-Flow integration** | ⬜ Pending | `quarkus-tarkus-flow`, TaskExecutorFactory SPI |
-| **6 — CaseHub integration** | ⬜ Pending | `quarkus-tarkus-casehub`, WorkerRegistry adapter |
-| **7 — Qhorus integration** | ⬜ Pending | `quarkus-tarkus-qhorus`, MCP tools |
-| **8 — Native image** | ⬜ Pending | GraalVM native build validation |
+| **1 — Core data model** | ✅ Complete | Storage SPI, JPA defaults, InMemory (testing module), WorkItem + AuditEntry entities, Flyway V1, WorkItemService, TarkusConfig |
+| **2 — REST API** | ✅ Complete | WorkItemResource — 13 endpoints, DTOs, exception mappers |
+| **3 — Lifecycle engine** | ✅ Complete | ExpiryCleanupJob, ClaimDeadlineJob, EscalationPolicy SPI + 3 implementations |
+| **4 — CDI events** | ✅ Complete | WorkItemLifecycleEvent on all transitions; rationale + planRef fields |
+| **5 — Quarkus-Flow integration** | ✅ Complete | `quarkus-tarkus-flow` — TarkusFlow DSL, HumanTaskFlowBridge, Uni<String> suspension |
+| **6 — Ledger module** | ✅ Complete | `quarkus-tarkus-ledger` — command/event model, hash chain, attestation, EigenTrust; optional, zero core impact |
+| **7 — Native image** | ✅ Complete | GraalVM 25 native build, 19 @QuarkusIntegrationTest tests, 0.084s startup |
+| **8 — CaseHub integration** | ⏸ Blocked | `quarkus-tarkus-casehub` — CaseHub WorkerRegistry adapter (awaiting CaseHub stable API) |
+| **9 — Qhorus integration** | ⏸ Blocked | `quarkus-tarkus-qhorus` — MCP tools (awaiting Qhorus stable API) |
+| **10 — ProvenanceLink** | ⏸ Blocked | Typed PROV-O causal graph — awaiting CaseHub + Qhorus integrations (issue #39) |
 
 ---
 
