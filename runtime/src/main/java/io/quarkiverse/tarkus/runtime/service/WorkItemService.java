@@ -122,7 +122,7 @@ public class WorkItemService {
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "COMPLETED", actorId, null);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("COMPLETED", saved.id, saved.status, actorId, null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("COMPLETED", saved.id, saved.status, actorId, resolution));
         }
         return saved;
     }

@@ -24,6 +24,7 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
     <module>runtime</module>
     <module>deployment</module>
     <module>testing</module>
+    <module>tarkus-flow</module>
   </modules>
 
   <scm>
@@ -35,6 +36,7 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
 
   <properties>
     <quarkus.version>3.32.2</quarkus.version>
+    <io.serverlessworkflow.version>7.13.8.Final</io.serverlessworkflow.version>
     <compiler-plugin.version>3.13.0</compiler-plugin.version>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -47,6 +49,13 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
         <groupId>io.quarkus.platform</groupId>
         <artifactId>quarkus-bom</artifactId>
         <version>${quarkus.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.serverlessworkflow</groupId>
+        <artifactId>serverlessworkflow-bom</artifactId>
+        <version>${io.serverlessworkflow.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
