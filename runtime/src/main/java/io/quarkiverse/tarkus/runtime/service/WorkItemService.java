@@ -5,10 +5,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.quarkiverse.tarkus.runtime.config.TarkusConfig;
+import io.quarkiverse.tarkus.runtime.event.WorkItemLifecycleEvent;
 import io.quarkiverse.tarkus.runtime.model.AuditEntry;
 import io.quarkiverse.tarkus.runtime.model.DelegationState;
 import io.quarkiverse.tarkus.runtime.model.WorkItem;
@@ -24,6 +26,9 @@ public class WorkItemService {
     private final WorkItemRepository workItemRepo;
     private final AuditEntryRepository auditRepo;
     private final TarkusConfig config;
+
+    @Inject
+    Event<WorkItemLifecycleEvent> lifecycleEvent;
 
     @Inject
     public WorkItemService(final WorkItemRepository workItemRepo,
@@ -66,6 +71,9 @@ public class WorkItemService {
 
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "CREATED", request.createdBy(), null);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("CREATED", saved.id, saved.status, request.createdBy(), null));
+        }
         return saved;
     }
 
@@ -80,6 +88,9 @@ public class WorkItemService {
         item.assignedAt = Instant.now();
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "ASSIGNED", claimantId, null);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", saved.id, saved.status, claimantId, null));
+        }
         return saved;
     }
 
@@ -93,6 +104,9 @@ public class WorkItemService {
         item.startedAt = Instant.now();
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "STARTED", actorId, null);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("STARTED", saved.id, saved.status, actorId, null));
+        }
         return saved;
     }
 
@@ -107,6 +121,9 @@ public class WorkItemService {
         item.resolution = resolution;
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "COMPLETED", actorId, null);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("COMPLETED", saved.id, saved.status, actorId, null));
+        }
         return saved;
     }
 
@@ -120,6 +137,9 @@ public class WorkItemService {
         item.completedAt = Instant.now();
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "REJECTED", actorId, reason);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("REJECTED", saved.id, saved.status, actorId, reason));
+        }
         return saved;
     }
 
@@ -140,6 +160,9 @@ public class WorkItemService {
         item.status = WorkItemStatus.PENDING;
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "DELEGATED", actorId, "to:" + toAssigneeId);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("DELEGATED", saved.id, saved.status, actorId, "to:" + toAssigneeId));
+        }
         return saved;
     }
 
@@ -153,6 +176,9 @@ public class WorkItemService {
         item.assigneeId = null;
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "RELEASED", actorId, null);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("RELEASED", saved.id, saved.status, actorId, null));
+        }
         return saved;
     }
 
@@ -167,6 +193,9 @@ public class WorkItemService {
         item.suspendedAt = Instant.now();
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "SUSPENDED", actorId, reason);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("SUSPENDED", saved.id, saved.status, actorId, reason));
+        }
         return saved;
     }
 
@@ -181,6 +210,9 @@ public class WorkItemService {
         item.suspendedAt = null;
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "RESUMED", actorId, null);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("RESUMED", saved.id, saved.status, actorId, null));
+        }
         return saved;
     }
 
@@ -194,6 +226,9 @@ public class WorkItemService {
         item.completedAt = Instant.now();
         final WorkItem saved = workItemRepo.save(item);
         audit(saved.id, "CANCELLED", actorId, reason);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("CANCELLED", saved.id, saved.status, actorId, reason));
+        }
         return saved;
     }
 
