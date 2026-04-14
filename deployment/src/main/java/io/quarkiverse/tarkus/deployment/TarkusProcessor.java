@@ -6,7 +6,7 @@ import io.quarkus.deployment.builditem.FeatureBuildItem;
 /**
  * Quarkus build-time processor for the Tarkus extension.
  * Registers the "tarkus" feature so it appears in the startup log:
- *   INFO  features: [agroal, cdi, flyway, hibernate-orm, scheduler, tarkus, ...]
+ * INFO features: [agroal, cdi, flyway, hibernate-orm, scheduler, tarkus, ...]
  *
  * Additional @BuildStep methods to add as the extension matures:
  * - Native image reflection configuration for WorkItem, WorkItemStatus, etc.

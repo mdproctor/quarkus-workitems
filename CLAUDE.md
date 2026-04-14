@@ -77,6 +77,12 @@ quarkus-tarkus/
 │       │   ├── WorkItemStatus.java        — enum: PENDING|ASSIGNED|IN_PROGRESS|...
 │       │   ├── WorkItemPriority.java      — enum: LOW|NORMAL|HIGH|CRITICAL
 │       │   └── AuditEntry.java            — PanacheEntity (append-only audit log)
+│       ├── repository/
+│       │   ├── WorkItemRepository.java    — SPI: save, findById, findAll, findInbox, findExpired
+│       │   ├── AuditEntryRepository.java  — SPI: append, findByWorkItemId
+│       │   └── jpa/
+│       │       ├── JpaWorkItemRepository.java    — default Panache impl (@ApplicationScoped)
+│       │       └── JpaAuditEntryRepository.java  — default Panache impl (@ApplicationScoped)
 │       ├── service/
 │       │   ├── WorkItemService.java       — lifecycle management, expiry, delegation
 │       │   └── EscalationPolicy.java      — SPI interface for escalation strategies
@@ -85,6 +91,10 @@ quarkus-tarkus/
 ├── deployment/                            — Extension deployment (build-time) module
 │   └── src/main/java/io/quarkiverse/tarkus/deployment/
 │       └── TarkusProcessor.java           — @BuildStep: FeatureBuildItem
+├── testing/                               — Test utilities module (quarkus-tarkus-testing)
+│   └── src/main/java/io/quarkiverse/tarkus/testing/
+│       ├── InMemoryWorkItemRepository.java    — ConcurrentHashMap-backed, no datasource needed
+│       └── InMemoryAuditEntryRepository.java  — list-backed
 ├── docs/
 │   ├── DESIGN.md                          — Implementation-tracking design document
 │   └── specs/
@@ -96,6 +106,8 @@ quarkus-tarkus/
 - `tarkus-flow/` — Quarkus-Flow `TaskExecutorFactory` SPI implementation
 - `tarkus-casehub/` — CaseHub `WorkerRegistry` adapter
 - `tarkus-qhorus/` — Qhorus MCP tools (`request_approval`, `check_approval`, `wait_for_approval`)
+- `tarkus-mongodb/` — MongoDB-backed `WorkItemRepository`
+- `tarkus-redis/` — Redis-backed `WorkItemRepository`
 
 ---
 

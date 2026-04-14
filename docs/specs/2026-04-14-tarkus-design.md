@@ -23,10 +23,10 @@ human worker, the `quarkus-tarkus-casehub` adapter creates a corresponding Tarku
 
 **WorkItem** *(io.quarkiverse.tarkus.runtime.model.WorkItem — Quarkus Tarkus)*
 A unit of work requiring human attention or judgment. Has lifecycle:
-PENDING → ASSIGNED → IN_PROGRESS → COMPLETED / REJECTED / DELEGATED / ESCALATED / EXPIRED.
-Persists minutes to days. Has assignee, priority, deadline, delegation chain, audit trail.
-Any system creates one — Quarkus-Flow, CaseHub, Qhorus, or a plain REST call.
-A human resolves it.
+PENDING → ASSIGNED → IN_PROGRESS → COMPLETED / REJECTED / SUSPENDED / CANCELLED / EXPIRED → ESCALATED.
+Persists minutes to days. Has assignee, candidate groups, priority, deadlines, delegation chain,
+follow-up date, category, form reference, and full audit trail. Any system creates one —
+Quarkus-Flow, CaseHub, Qhorus, or a plain REST call. A human resolves it.
 
 **The one-sentence rule:** A `Task` is controlled by a machine. A `WorkItem` waits for a human.
 
@@ -62,14 +62,20 @@ Any Quarkus application can embed Tarkus to get:
 │  └── EscalationPolicy SPI                                       │
 │         │                                                        │
 │         ▼                                                        │
-│  WorkItem (Panache entity)   AuditEntry (Panache entity)        │
-│  H2 (dev/test) · PostgreSQL (production)                        │
+│  WorkItemRepository SPI  ←── JpaWorkItemRepository (default)   │
+│  AuditEntryRepository SPI ←── JpaAuditEntryRepository (default) │
+│         │                     (Panache, H2/PostgreSQL)          │
+│         │                                                        │
+│         └── InMemoryWorkItemRepository (quarkus-tarkus-testing) │
 └─────────────────────────────────────────────────────────────────┘
 
 Optional integration modules (separate artifacts, future):
-  quarkus-tarkus-flow     →  TaskExecutorFactory SPI (Quarkus-Flow)
-  quarkus-tarkus-casehub  →  WorkerRegistry adapter (CaseHub)
-  quarkus-tarkus-qhorus   →  MCP tools (Qhorus)
+  quarkus-tarkus-flow      →  TaskExecutorFactory SPI (Quarkus-Flow)
+  quarkus-tarkus-casehub   →  WorkerRegistry adapter (CaseHub)
+  quarkus-tarkus-qhorus    →  MCP tools (Qhorus)
+  quarkus-tarkus-testing   →  InMemoryWorkItemRepository for unit tests
+  quarkus-tarkus-mongodb   →  MongoDB-backed repository (future)
+  quarkus-tarkus-redis     →  Redis-backed repository (future)
 ```
 
 ---
@@ -82,31 +88,56 @@ Optional integration modules (separate artifacts, future):
 public class WorkItem extends PanacheEntityBase {
     @Id public UUID id;
 
+    // Core description
     public String title;
     public String description;
+    public String category;               // free-text classification: "finance", "legal", "security-review"
+    public String formKey;                // UI form reference — how a frontend should render this item
+
+    // Status
+    @Enumerated(EnumType.STRING)
+    public WorkItemStatus status;
 
     @Enumerated(EnumType.STRING)
-    public WorkItemStatus status;          // PENDING|ASSIGNED|IN_PROGRESS|COMPLETED|REJECTED|DELEGATED|ESCALATED|EXPIRED
+    public WorkItemPriority priority;     // LOW|NORMAL|HIGH|CRITICAL
 
+    // Assignment — work queue model
+    public String assigneeId;            // who currently has it (actual owner)
+    public String owner;                 // who is ultimately responsible (set on first delegation)
+    public String candidateGroups;       // comma-separated groups who can claim (null = pre-assigned)
+    public String candidateUsers;        // comma-separated individual users who can claim
+    public String requiredCapabilities;  // comma-separated capability tags for routing
+    public String createdBy;             // system or agent that created it
+
+    // Delegation
     @Enumerated(EnumType.STRING)
-    public WorkItemPriority priority;      // LOW|NORMAL|HIGH|CRITICAL
+    public DelegationState delegationState;  // null | PENDING | RESOLVED
+    public String delegationChain;           // comma-separated prior assignees (audit trail)
 
-    public String assigneeId;             // Tarkus worker ID (human or agent)
-    public String requiredCapabilities;   // comma-separated for routing
-    public String createdBy;              // system or agent that created it
-    public String delegationChain;        // comma-separated prior assignees
-
+    // Payload
     @Column(columnDefinition = "TEXT")
-    public String payload;                // JSON context for the human to act on
-
+    public String payload;               // JSON context for the human to act on
     @Column(columnDefinition = "TEXT")
-    public String resolution;             // JSON decision written by the human
+    public String resolution;            // JSON decision written by the human
 
+    // Deadlines
+    public Instant claimDeadline;        // must be claimed by — breach triggers claim escalation
+    public Instant expiresAt;            // must be completed by — breach triggers completion escalation
+    public Instant followUpDate;         // reminder date; surfaces in inbox, no escalation
+
+    // Timestamps (aligned with quarkus-flow lifecycle event naming)
     public Instant createdAt;
     public Instant updatedAt;
-    public Instant expiresAt;             // null = use default-expiry-hours config
-    public Instant assignedAt;
-    public Instant completedAt;
+    public Instant assignedAt;           // when claimed/assigned
+    public Instant startedAt;            // when IN_PROGRESS began
+    public Instant completedAt;          // when COMPLETED, REJECTED, CANCELLED, or EXPIRED
+    public Instant suspendedAt;          // when SUSPENDED
+}
+
+// io.quarkiverse.tarkus.runtime.model.DelegationState
+public enum DelegationState {
+    PENDING,   // delegated to another; they are working it
+    RESOLVED   // delegate completed; owner must confirm
 }
 
 // io.quarkiverse.tarkus.runtime.model.AuditEntry
@@ -114,22 +145,61 @@ public class WorkItem extends PanacheEntityBase {
 public class AuditEntry extends PanacheEntityBase {
     @Id public UUID id;
     public UUID workItemId;
-    public String event;                  // CREATED|ASSIGNED|CLAIMED|DELEGATED|COMPLETED|REJECTED|ESCALATED|EXPIRED
-    public String actor;                  // who performed the action
-    public String detail;                 // JSON detail (e.g., previous assignee on delegation)
+    public String event;                 // see AuditEvent enum values below
+    public String actor;                 // who performed the action
+    public String detail;                // JSON detail (e.g., previous assignee on delegation)
     public Instant occurredAt;
 }
+
+// Audit event values (aligned with quarkus-flow task event naming)
+// CREATED | ASSIGNED | STARTED | COMPLETED | REJECTED | DELEGATED
+// RELEASED | SUSPENDED | RESUMED | CANCELLED | EXPIRED | ESCALATED
 ```
 
-**WorkItemStatus lifecycle:**
-```
-PENDING → ASSIGNED → IN_PROGRESS → COMPLETED
-                   ↘               ↘
-                    DELEGATED        REJECTED
-                    (→ PENDING for new assignee)
+**WorkItemStatus — aligned with quarkus-flow (`SUSPENDED`, `CANCELLED` are identical names):**
 
-PENDING/ASSIGNED/IN_PROGRESS → EXPIRED (by ExpiryCleanupJob)
-EXPIRED → ESCALATED (by EscalationPolicy SPI)
+```
+PENDING      — available for claiming; no assignee yet (or returned to pool after DELEGATED/RELEASED)
+ASSIGNED     — claimed by a specific person; not yet actively working
+IN_PROGRESS  — being actively worked (≈ RUNNING in quarkus-flow)
+COMPLETED    — successfully resolved (identical to quarkus-flow)
+REJECTED     — human declined or declared uncomplete-able (≈ FAULTED in quarkus-flow)
+DELEGATED    — transitional: ownership transferred, pending new assignment
+SUSPENDED    — on hold; will resume (identical to quarkus-flow SUSPENDED)
+CANCELLED    — externally cancelled by system or admin (identical to quarkus-flow CANCELLED)
+EXPIRED      — passed completion deadline without resolution; triggers escalation policy
+ESCALATED    — escalation policy has fired post-expiry (terminal or awaiting admin action)
+```
+
+**Lifecycle transitions:**
+```
+PENDING → ASSIGNED (claim)
+        → CANCELLED (admin)
+
+ASSIGNED → IN_PROGRESS (start)
+         → DELEGATED → PENDING (for new assignee)
+         → RELEASED → PENDING (relinquish back to pool)
+         → SUSPENDED
+         → CANCELLED (admin)
+
+IN_PROGRESS → COMPLETED
+            → REJECTED
+            → DELEGATED → PENDING
+            → SUSPENDED
+            → CANCELLED (admin)
+
+SUSPENDED → ASSIGNED | IN_PROGRESS (resume to prior state)
+          → CANCELLED (admin)
+
+PENDING | ASSIGNED | IN_PROGRESS | SUSPENDED → EXPIRED (ExpiryCleanupJob)
+EXPIRED → ESCALATED (EscalationPolicy SPI)
+```
+
+**DelegationState transitions:**
+```
+(null) → PENDING  (delegate operation)
+PENDING → RESOLVED  (delegate completes; owner must confirm)
+RESOLVED → (null)   (owner confirms; item re-enters normal lifecycle)
 ```
 
 ---
@@ -138,17 +208,42 @@ EXPIRED → ESCALATED (by EscalationPolicy SPI)
 
 Base path: `/tarkus/workitems`
 
+**Inbox and query:**
+
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/` | Create a WorkItem |
-| `GET` | `/inbox` | List WorkItems for `?assignee=X&status=PENDING&priority=HIGH` |
-| `GET` | `/{id}` | Get full WorkItem with audit log |
-| `PUT` | `/{id}/claim` | Claim — assign to self (must be PENDING) |
-| `PUT` | `/{id}/start` | Start work (ASSIGNED → IN_PROGRESS) |
-| `PUT` | `/{id}/complete` | Complete with resolution JSON body |
-| `PUT` | `/{id}/reject` | Reject with reason |
-| `PUT` | `/{id}/delegate` | Delegate to `?to=assigneeId` |
+| `GET` | `/inbox` | Human inbox: `?assignee=X&candidateGroup=Y&candidateUser=Z&status=PENDING&priority=HIGH&category=finance&followUp=true` |
 | `GET` | `/` | List all WorkItems (admin) |
+| `GET` | `/{id}` | Get full WorkItem with audit log |
+| `POST` | `/` | Create a WorkItem |
+
+**Lifecycle operations:**
+
+| Method | Path | Transition | Notes |
+|---|---|---|---|
+| `PUT` | `/{id}/claim` | PENDING → ASSIGNED | Caller becomes assignee |
+| `PUT` | `/{id}/start` | ASSIGNED → IN_PROGRESS | Begin work |
+| `PUT` | `/{id}/complete` | IN_PROGRESS → COMPLETED | Body: resolution JSON |
+| `PUT` | `/{id}/reject` | ASSIGNED\|IN_PROGRESS → REJECTED | Body: reason |
+| `PUT` | `/{id}/delegate` | → DELEGATED → PENDING | `?to=assigneeId`; sets owner if first delegation |
+| `PUT` | `/{id}/release` | ASSIGNED → PENDING | Relinquish back to candidate pool |
+| `PUT` | `/{id}/suspend` | ASSIGNED\|IN_PROGRESS → SUSPENDED | Body: reason |
+| `PUT` | `/{id}/resume` | SUSPENDED → prior state | Restores ASSIGNED or IN_PROGRESS |
+| `PUT` | `/{id}/cancel` | any → CANCELLED | Admin only; body: reason |
+
+**Inbox query parameters:**
+
+| Parameter | Meaning |
+|---|---|
+| `assignee` | Items directly assigned to this user |
+| `candidateGroup` | Items claimable by this group |
+| `candidateUser` | Items this user was individually invited to claim |
+| `status` | Filter by status (default: PENDING,ASSIGNED,IN_PROGRESS) |
+| `priority` | Filter by priority |
+| `category` | Filter by category |
+| `followUp=true` | Items where followUpDate ≤ now (reminder view) |
+
+The inbox query uses OR across `assignee`, `candidateGroup`, `candidateUser` — returning all items the caller can see or act on.
 
 **Create request body:**
 ```json
@@ -156,8 +251,13 @@ Base path: `/tarkus/workitems`
   "title": "Review auth-refactor analysis",
   "description": "Alice's security analysis needs sign-off before proceeding",
   "assigneeId": "alice",
+  "candidateGroups": "security-team,leads",
   "priority": "HIGH",
+  "category": "security-review",
+  "formKey": "tarkus/security-approval/v1",
+  "claimDeadline": "2026-04-15T09:00:00Z",
   "expiresAt": "2026-04-15T12:00:00Z",
+  "followUpDate": "2026-04-15T08:00:00Z",
   "payload": { "analysisRef": "uuid-of-shared-data-artefact", "channelName": "auth-refactor" }
 }
 ```
@@ -170,11 +270,66 @@ Base path: `/tarkus/workitems`
 
 | Property | Default | Meaning |
 |---|---|---|
-| `quarkus.tarkus.default-expiry-hours` | 24 | Hours before a WorkItem expires if no `expiresAt` is set |
-| `quarkus.tarkus.escalation-policy` | notify | What happens on expiry: `notify`, `reassign`, `auto-reject` |
-| `quarkus.tarkus.cleanup.expiry-check-seconds` | 60 | How often the expiry job runs |
+| `quarkus.tarkus.default-expiry-hours` | 24 | Default completion deadline if no `expiresAt` is set |
+| `quarkus.tarkus.default-claim-hours` | 4 | Default claim deadline if no `claimDeadline` is set (0 = no claim deadline) |
+| `quarkus.tarkus.escalation-policy` | notify | What happens on completion expiry: `notify`, `reassign`, `auto-reject` |
+| `quarkus.tarkus.claim-escalation-policy` | notify | What happens on claim deadline breach: `notify`, `reassign` |
+| `quarkus.tarkus.cleanup.expiry-check-seconds` | 60 | How often the expiry/claim-deadline job runs |
 
 Consuming app owns datasource config — none in the extension's `application.properties`.
+
+---
+
+## Storage SPI
+
+Persistence is pluggable via two CDI interfaces in `io.quarkiverse.tarkus.runtime.repository`:
+
+```java
+public interface WorkItemRepository {
+    WorkItem save(WorkItem workItem);
+    Optional<WorkItem> findById(UUID id);
+    List<WorkItem> findAll();
+    /**
+     * Inbox query — returns items where any of the following match (OR):
+     *   - assigneeId equals the given assignee
+     *   - candidateGroups contains any of the given groups
+     *   - candidateUsers contains the given assignee
+     * Additional filters (all nullable = "any"): status, priority, category, followUpBefore.
+     */
+    List<WorkItem> findInbox(String assignee, List<String> candidateGroups,
+                             WorkItemStatus status, WorkItemPriority priority,
+                             String category, Instant followUpBefore);
+    /** Items where expiresAt <= now AND status is PENDING, ASSIGNED, IN_PROGRESS, or SUSPENDED */
+    List<WorkItem> findExpired(Instant now);
+    /** Items where claimDeadline <= now AND status is PENDING */
+    List<WorkItem> findUnclaimedPastDeadline(Instant now);
+}
+
+public interface AuditEntryRepository {
+    void append(AuditEntry entry);
+    List<AuditEntry> findByWorkItemId(UUID workItemId);
+}
+```
+
+**Default implementations** (`runtime.repository.jpa`):
+- `JpaWorkItemRepository` — Panache-backed; registered `@ApplicationScoped`
+- `JpaAuditEntryRepository` — Panache-backed; registered `@ApplicationScoped`
+
+**Test implementation** (`quarkus-tarkus-testing` module):
+- `InMemoryWorkItemRepository` — `ConcurrentHashMap`-backed; no datasource required
+- `InMemoryAuditEntryRepository` — list-backed
+- Register as `@ApplicationScoped @Alternative @Priority(1)` to override the JPA defaults
+
+**Custom implementations** — any consuming app or module can provide an alternative:
+```java
+@ApplicationScoped
+@Alternative
+@Priority(1)
+public class MyRedisWorkItemRepository implements WorkItemRepository { ... }
+```
+
+The JPA default requires a datasource. When using `quarkus-tarkus-testing`, no datasource
+or Flyway migration is needed — making pure unit tests (no `@QuarkusTest`) trivial.
 
 ---
 
@@ -242,7 +397,7 @@ Adds MCP tools backed by the Tarkus REST API:
 
 | Phase | Status | What |
 |---|---|---|
-| **1 — Core data model** | ⬜ Pending | WorkItem + AuditEntry entities, Flyway V1, WorkItemService, TarkusConfig |
+| **1 — Core data model** | ⬜ Pending | Storage SPI interfaces, JPA defaults, InMemory impl (testing module), WorkItem + AuditEntry entities, Flyway V1, WorkItemService, TarkusConfig |
 | **2 — REST API** | ⬜ Pending | WorkItemResource — all CRUD + inbox + lifecycle endpoints |
 | **3 — Lifecycle engine** | ⬜ Pending | ExpiryCleanupJob, EscalationPolicy SPI, default implementations |
 | **4 — CloudEvents** | ⬜ Pending | Event emission on all lifecycle transitions |
@@ -253,4 +408,70 @@ Adds MCP tools backed by the Tarkus REST API:
 
 ---
 
-*This specification emerged from design discussions during the quarkus-qhorus project (2026-04-14), which identified the need for a standalone human task layer across CaseHub, Quarkus-Flow, and Qhorus.*
+## Future Considerations
+
+Deliberately deferred — not in scope for v1 but worth revisiting as the ecosystem matures.
+Sources: WS-HumanTask (OASIS), BPMN 2.0, CMMN, Camunda 8, Flowable, Activiti.
+
+### Multi-tenancy (`tenantId`)
+
+Add `tenantId: String` to `WorkItem` and `AuditEntry`. Required when a single Quarkus
+application serves multiple tenants. All queries would include a tenant filter.
+Quarkus multi-tenancy infrastructure would need to be wired in. Deferred because the
+initial integration targets (Qhorus, CaseHub, Quarkus-Flow) are single-tenant.
+
+### Subtasks (`parentWorkItemId`)
+
+A `WorkItem` could be a child of another `WorkItem`. Parent completes when all children
+complete. Modelled as a `parentWorkItemId: UUID` FK and a completion rollup in
+`WorkItemService`. Deferred because it adds significant lifecycle complexity and no
+integration target currently requires it. CaseHub integration may surface this need.
+
+### Multi-approver patterns
+
+Approval flows where multiple humans must act — all must approve (quorum), any one suffices,
+or a sequential chain. Current model supports this by creating multiple WorkItems and
+coordinating at the calling layer (e.g., Quarkus-Flow workflow). Tarkus could natively
+model it with: `approvalType: enum (ANY_OF, ALL_OF, SEQUENTIAL)`, `requiredApprovals: int`,
+and a parent/child relationship. Deferred — the calling-layer composition approach is
+sufficient for v1.
+
+### Discretionary (ad-hoc) tasks
+
+CMMN concept: a task that is *optional* — the human decides whether to perform it at all.
+Modelled as `discretionary: boolean`. A discretionary WorkItem appears in the "task planner"
+view; the human explicitly adds it to their work if they choose to act on it. Potentially
+useful for the Qhorus integration (AI agent suggests optional investigative steps). Deferred
+pending real use cases.
+
+### `skipable` flag + skip operation
+
+WS-HumanTask allows tasks to be marked as skipable by a business administrator without the
+task being performed. Requires `skipable: boolean` on `WorkItem` and a `PUT /{id}/skip`
+endpoint with admin authorisation. Useful for workflow un-blocking scenarios. Deferred.
+
+### Information-request state (`WAITING_FOR_INFO`)
+
+Enterprise BPM pattern: an assignee asks the task creator a clarifying question, putting the
+task on hold until the creator responds. Modelled as an additional status `WAITING_FOR_INFO`
+with a sub-thread of messages. Complex to implement well. Deferred — `SUSPENDED` with a
+detail note in the audit log approximates this for v1.
+
+### Routing strategies
+
+Work-queue routing beyond candidateGroups: round-robin within a group, load-balanced by
+current IN_PROGRESS count, organizational-hierarchy-based. Modelled as a routing strategy
+SPI alongside the escalation policy SPI. Deferred — candidateGroups + manual claim covers
+most cases.
+
+### `taskDefinitionKey` / workflow linkage
+
+When a WorkItem is created by a workflow engine (Quarkus-Flow, CaseHub), storing the source
+workflow definition ID and step ID enables dashboards to show "which workflow generated this
+task" and supports analytics across workflow runs. Fields: `sourceSystem: String`,
+`sourceDefinitionId: String`, `sourceInstanceId: String`. Deferred to the integration
+module phases (Phases 5–7) where the integration adapters can populate these fields.
+
+---
+
+*This specification emerged from design discussions during the quarkus-qhorus project (2026-04-14), which identified the need for a standalone human task layer across CaseHub, Quarkus-Flow, and Qhorus. The WorkItem model was informed by WS-HumanTask (OASIS), BPMN 2.0 UserTask, CMMN HumanTask, Camunda 8, Flowable, and Activiti.*

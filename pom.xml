@@ -23,11 +23,7 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
   <modules>
     <module>runtime</module>
     <module>deployment</module>
-    <!-- Future integration modules:
-    <module>tarkus-flow</module>
-    <module>tarkus-casehub</module>
-    <module>tarkus-qhorus</module>
-    -->
+    <module>testing</module>
   </modules>
 
   <scm>
@@ -53,6 +49,12 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
         <version>${quarkus.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.26.3</version>
+        <scope>test</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
