@@ -102,10 +102,13 @@ quarkus-tarkus/
 └── HANDOFF.md                             — Session context for resumption
 ```
 
+**Integration modules (built):**
+- `tarkus-flow/` — Quarkus-Flow CDI bridge (`HumanTaskFlowBridge`, `PendingWorkItemRegistry`, `WorkItemFlowEventListener`)
+- `integration-tests/` — `@QuarkusIntegrationTest` suite and native image validation (19 tests, 0.084s native startup)
+
 **Future integration modules (not yet scaffolded):**
-- `tarkus-flow/` — Quarkus-Flow `TaskExecutorFactory` SPI implementation
-- `tarkus-casehub/` — CaseHub `WorkerRegistry` adapter
-- `tarkus-qhorus/` — Qhorus MCP tools (`request_approval`, `check_approval`, `wait_for_approval`)
+- `tarkus-casehub/` — CaseHub `WorkerRegistry` adapter (blocked: CaseHub not yet complete)
+- `tarkus-qhorus/` — Qhorus MCP tools (`request_approval`, `check_approval`, `wait_for_approval`) (blocked: Qhorus not yet complete)
 - `tarkus-mongodb/` — MongoDB-backed `WorkItemRepository`
 - `tarkus-redis/` — Redis-backed `WorkItemRepository`
 
@@ -123,9 +126,12 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl runtime
 # Run specific test
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -Dtest=ClassName -pl runtime
 
-# Native image build (requires GraalVM)
+# Black-box integration tests (JVM mode)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn verify -pl integration-tests
+
+# Native image integration tests (requires GraalVM 25)
 JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home \
-  mvn package -Pnative -DskipTests
+  mvn verify -Pnative -pl integration-tests
 ```
 
 **Use `mvn` not `./mvnw`** — maven wrapper not configured on this machine.
@@ -136,6 +142,9 @@ JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home \
 - `quarkus-extension-processor` requires **Javadoc on every method** in `@ConfigMapping` interfaces, including group accessors — missing one causes a compile-time error
 - The `extension-descriptor` goal validates that the deployment POM declares **all transitive deployment JARs** — run `mvn install -DskipTests` first after modifying the deployment POM
 - `key` is a reserved word in H2 — avoid it as a column name in Flyway migrations
+- `@QuarkusIntegrationTest` must live in a **separate module** from the extension runtime — the `quarkus-maven-plugin` build goal requires a configured datasource at augmentation time; extensions intentionally omit datasource config (use the `integration-tests/` module)
+- `@Scheduled` intervals require `${property}s` syntax (MicroProfile Config), **not** `{property}s` — bare braces are silently ignored at augmentation time, causing `DateTimeParseException` at native startup
+- Panache `find()` short-form WHERE clause must use **bare field names** (`assigneeId = :x`), not alias-prefixed names (`wi.assigneeId = :x`) — the alias is internal to Panache and not exposed in the condition string
 
 ---
 
