@@ -4,3 +4,8 @@ target/
 .idea/
 *.iml
 .DS_Store
+.claude/
+# Stray Maven artifacts produced when mvn runs from project root
+META-INF/
+application.properties
+db/
