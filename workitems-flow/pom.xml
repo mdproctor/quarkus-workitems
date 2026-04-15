@@ -5,21 +5,21 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.quarkiverse.tarkus</groupId>
-    <artifactId>quarkus-tarkus-parent</artifactId>
+    <groupId>io.quarkiverse.workitems</groupId>
+    <artifactId>quarkus-workitems-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>quarkus-tarkus-flow</artifactId>
-  <name>Quarkus Tarkus - Quarkus Flow Integration</name>
+  <artifactId>quarkus-workitems-flow</artifactId>
+  <name>Quarkus WorkItems - Quarkus Flow Integration</name>
   <description>CDI bridge for suspending Quarkus-Flow workflows on Tarkus WorkItems and resuming them when a human resolves the item.</description>
 
   <dependencies>
 
     <!-- Tarkus runtime: WorkItemService, WorkItemLifecycleEvent, model classes -->
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems</artifactId>
       <version>${project.version}</version>
     </dependency>
 
@@ -63,8 +63,8 @@
 
     <!-- Integration tests: Tarkus extension deployment needed for @QuarkusTest to activate WorkItemService CDI beans -->
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus-deployment</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems-deployment</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

@@ -5,22 +5,22 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.quarkiverse.tarkus</groupId>
-    <artifactId>quarkus-tarkus-parent</artifactId>
+    <groupId>io.quarkiverse.workitems</groupId>
+    <artifactId>quarkus-workitems-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>quarkus-tarkus-integration-tests</artifactId>
-  <name>Quarkus Tarkus - Integration Tests</name>
-  <description>Black-box integration tests and native image validation for Quarkus Tarkus.
+  <artifactId>quarkus-workitems-integration-tests</artifactId>
+  <name>Quarkus WorkItems - Integration Tests</name>
+  <description>Black-box integration tests and native image validation for Quarkus WorkItems.
 Contains a minimal Quarkus app embedding the extension, packaged and tested via
 @QuarkusIntegrationTest. In native mode: mvn verify -Pnative.</description>
 
   <dependencies>
     <!-- The extension under test -->
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems</artifactId>
       <version>${project.version}</version>
     </dependency>
 

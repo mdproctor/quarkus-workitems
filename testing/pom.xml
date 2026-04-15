@@ -5,19 +5,19 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.quarkiverse.tarkus</groupId>
-    <artifactId>quarkus-tarkus-parent</artifactId>
+    <groupId>io.quarkiverse.workitems</groupId>
+    <artifactId>quarkus-workitems-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>quarkus-tarkus-testing</artifactId>
-  <name>Quarkus Tarkus - Testing</name>
-  <description>In-memory repository implementations for use in unit tests of applications that embed Quarkus Tarkus. No datasource or Flyway required.</description>
+  <artifactId>quarkus-workitems-testing</artifactId>
+  <name>Quarkus WorkItems - Testing</name>
+  <description>In-memory repository implementations for use in unit tests of applications that embed Quarkus WorkItems. No datasource or Flyway required.</description>
 
   <dependencies>
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

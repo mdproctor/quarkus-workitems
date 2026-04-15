@@ -10,15 +10,15 @@
     <version>21</version>
   </parent>
 
-  <groupId>io.quarkiverse.tarkus</groupId>
-  <artifactId>quarkus-tarkus-parent</artifactId>
+  <groupId>io.quarkiverse.workitems</groupId>
+  <artifactId>quarkus-workitems-parent</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>Quarkus Tarkus - Parent</name>
+  <name>Quarkus WorkItems - Parent</name>
   <description>Human-scale WorkItem lifecycle management — expiry, delegation, escalation, audit trail.
 Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, CaseHub, and Qhorus.</description>
-  <url>https://github.com/mdproctor/quarkus-tarkus</url>
+  <url>https://github.com/mdproctor/quarkus-workitems</url>
 
   <modules>
     <module>runtime</module>
@@ -33,9 +33,9 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
   </modules>
 
   <scm>
-    <connection>scm:git:git@github.com:mdproctor/quarkus-tarkus.git</connection>
-    <developerConnection>scm:git:git@github.com:mdproctor/quarkus-tarkus.git</developerConnection>
-    <url>https://github.com/mdproctor/quarkus-tarkus</url>
+    <connection>scm:git:git@github.com:mdproctor/quarkus-workitems.git</connection>
+    <developerConnection>scm:git:git@github.com:mdproctor/quarkus-workitems.git</developerConnection>
+    <url>https://github.com/mdproctor/quarkus-workitems</url>
     <tag>HEAD</tag>
   </scm>
 

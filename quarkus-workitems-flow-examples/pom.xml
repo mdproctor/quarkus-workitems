@@ -5,13 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.quarkiverse.tarkus</groupId>
-    <artifactId>quarkus-tarkus-parent</artifactId>
+    <groupId>io.quarkiverse.workitems</groupId>
+    <artifactId>quarkus-workitems-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>quarkus-tarkus-flow-examples</artifactId>
-  <name>Quarkus Tarkus - Quarkus Flow Examples</name>
+  <artifactId>quarkus-workitems-flow-examples</artifactId>
+  <name>Quarkus WorkItems - Quarkus Flow Examples</name>
   <description>Runnable example showing TarkusFlow DSL integration: a contract review workflow
 that mixes automated function() steps with human tarkus() steps, demonstrating candidateGroups,
 assigneeId, priority, payloadFrom, and the full workflow suspension/resume cycle.</description>
@@ -20,15 +20,15 @@ assigneeId, priority, payloadFrom, and the full workflow suspension/resume cycle
 
     <!-- Core extension -->
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems</artifactId>
       <version>${project.version}</version>
     </dependency>
 
     <!-- Quarkus-Flow integration — TarkusFlow, TarkusTaskBuilder, HumanTaskFlowBridge -->
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus-flow</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems-flow</artifactId>
       <version>${project.version}</version>
     </dependency>
 
@@ -73,8 +73,8 @@ assigneeId, priority, payloadFrom, and the full workflow suspension/resume cycle
 
     <!-- Required for @QuarkusTest to activate Tarkus CDI beans -->
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus-deployment</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems-deployment</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

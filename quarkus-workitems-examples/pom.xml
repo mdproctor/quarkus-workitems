@@ -5,26 +5,26 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.quarkiverse.tarkus</groupId>
-    <artifactId>quarkus-tarkus-parent</artifactId>
+    <groupId>io.quarkiverse.workitems</groupId>
+    <artifactId>quarkus-workitems-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>quarkus-tarkus-examples</artifactId>
-  <name>Quarkus Tarkus - Examples</name>
+  <artifactId>quarkus-workitems-examples</artifactId>
+  <name>Quarkus WorkItems - Examples</name>
   <description>Runnable scenario examples demonstrating every ledger, audit, and lifecycle
-capability of quarkus-tarkus. Each scenario runs via POST /examples/{name}/run,
+capability of quarkus-workitems. Each scenario runs via POST /examples/{name}/run,
 logs a narrative to stdout, and returns the full ledger trail as JSON.</description>
 
   <dependencies>
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus-ledger</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems-ledger</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

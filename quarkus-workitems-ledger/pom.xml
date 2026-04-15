@@ -5,13 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.quarkiverse.tarkus</groupId>
-    <artifactId>quarkus-tarkus-parent</artifactId>
+    <groupId>io.quarkiverse.workitems</groupId>
+    <artifactId>quarkus-workitems-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>quarkus-tarkus-ledger</artifactId>
-  <name>Quarkus Tarkus - Ledger</name>
+  <artifactId>quarkus-workitems-ledger</artifactId>
+  <name>Quarkus WorkItems - Ledger</name>
   <description>Optional ledger module providing rich accountability: command/event separation,
 decision context snapshots, hash chain tamper evidence, peer attestation, and
 EigenTrust reputation. Add this module to enable ledger capabilities — the core
@@ -21,8 +21,8 @@ extension is unchanged whether this module is present or not.</description>
 
     <!-- Core extension — provides WorkItemLifecycleEvent, WorkItemRepository, WorkItem -->
     <dependency>
-      <groupId>io.quarkiverse.tarkus</groupId>
-      <artifactId>quarkus-tarkus</artifactId>
+      <groupId>io.quarkiverse.workitems</groupId>
+      <artifactId>quarkus-workitems</artifactId>
       <version>${project.version}</version>
     </dependency>
 

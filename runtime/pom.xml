@@ -5,13 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.quarkiverse.tarkus</groupId>
-    <artifactId>quarkus-tarkus-parent</artifactId>
+    <groupId>io.quarkiverse.workitems</groupId>
+    <artifactId>quarkus-workitems-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>quarkus-tarkus</artifactId>
-  <name>Quarkus Tarkus - Runtime</name>
+  <artifactId>quarkus-workitems</artifactId>
+  <name>Quarkus WorkItems - Runtime</name>
 
   <dependencies>
 
