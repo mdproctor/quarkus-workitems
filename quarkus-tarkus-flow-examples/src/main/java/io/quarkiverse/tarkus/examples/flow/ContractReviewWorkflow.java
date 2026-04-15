@@ -9,7 +9,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import io.quarkiverse.tarkus.flow.TarkusFlow;
 import io.quarkiverse.tarkus.runtime.model.WorkItemPriority;
 import io.serverlessworkflow.api.types.Workflow;
-import io.serverlessworkflow.fluent.func.dsl.FuncDSL;
 
 /**
  * A multi-step contract review workflow demonstrating the TarkusFlow DSL.
@@ -58,8 +57,7 @@ public class ContractReviewWorkflow extends TarkusFlow {
                         // ── Step 1: Automated validation ─────────────────────────────────────
                         // Runs immediately — no human involved.
                         // Extracts the submission fields and stamps a validation status.
-                        FuncDSL.function(
-                                "validate",
+                        fn("validate",
                                 (Map submission) -> Map.of(
                                         "contractId", submission.getOrDefault("contractId", "unknown"),
                                         "party", submission.getOrDefault("party", "unknown"),
@@ -105,8 +103,7 @@ public class ContractReviewWorkflow extends TarkusFlow {
                         // ── Step 4: Automated countersigning ─────────────────────────────────
                         // Runs immediately after executive approval.
                         // Combines the executive's decision with the contract ID for the audit record.
-                        FuncDSL.function(
-                                "countersign",
+                        fn("countersign",
                                 (String executiveDecision) -> "EXECUTED — " + executiveDecision,
                                 String.class))
 
