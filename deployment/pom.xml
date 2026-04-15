@@ -21,13 +21,6 @@
       <version>${project.version}</version>
     </dependency>
 
-    <!-- Ledger extension deployment (enables LedgerConfig recognition and native config) -->
-    <dependency>
-      <groupId>io.quarkiverse.ledger</groupId>
-      <artifactId>quarkus-ledger-deployment</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
-    </dependency>
-
     <!-- Core deployment -->
     <dependency>
       <groupId>io.quarkus</groupId>

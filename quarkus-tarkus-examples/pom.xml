@@ -23,6 +23,11 @@ logs a narrative to stdout, and returns the full ledger trail as JSON.</descript
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.quarkiverse.tarkus</groupId>
+      <artifactId>quarkus-tarkus-ledger</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jdbc-h2</artifactId>
     </dependency>
@@ -40,7 +45,7 @@ logs a narrative to stdout, and returns the full ledger trail as JSON.</descript
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-junit</artifactId>
+      <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
