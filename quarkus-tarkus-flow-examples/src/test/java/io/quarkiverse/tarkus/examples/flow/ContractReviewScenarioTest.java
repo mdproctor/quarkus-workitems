@@ -36,7 +36,7 @@ class ContractReviewScenarioTest {
         // Scenario identity
         assertThat(response.jsonPath().getString("scenario")).isEqualTo("contract-review");
 
-        // Both tarkus() steps created WorkItems
+        // Both workItem() steps created WorkItems
         final List<String> workItemIds = response.jsonPath().getList("workItemIds");
         assertThat(workItemIds)
                 .as("Expected 2 WorkItems: one for legal review, one for executive sign-off")

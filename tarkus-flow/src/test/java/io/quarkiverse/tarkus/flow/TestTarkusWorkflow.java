@@ -11,7 +11,7 @@ import io.serverlessworkflow.api.types.Workflow;
 
 /**
  * Test workflow that exercises the TarkusFlow DSL.
- * Used by HumanTaskIntegrationTest to verify WorkItem creation via tarkus() DSL.
+ * Used by HumanTaskIntegrationTest to verify WorkItem creation via workItem() DSL.
  */
 @ApplicationScoped
 public class TestTarkusWorkflow extends TarkusFlow {
@@ -20,7 +20,7 @@ public class TestTarkusWorkflow extends TarkusFlow {
     public Workflow descriptor() {
         return workflow("test-tarkus-flow")
                 .tasks(
-                        tarkus("legalReview")
+                        workItem("legalReview")
                                 .title("Legal review required")
                                 .candidateGroups("legal-team")
                                 .priority(WorkItemPriority.HIGH)

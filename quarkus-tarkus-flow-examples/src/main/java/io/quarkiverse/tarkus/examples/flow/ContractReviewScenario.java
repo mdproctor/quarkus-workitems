@@ -31,7 +31,7 @@ import io.quarkiverse.tarkus.runtime.service.WorkItemService;
  * <p>
  * {@code POST /examples/flow/run} starts a {@link ContractReviewWorkflow} instance and drives
  * it end-to-end by simulating human actors claiming and completing each WorkItem as it appears.
- * The workflow suspends at each {@code tarkus()} step; this runner detects the created WorkItem,
+ * The workflow suspends at each {@code workItem()} step; this runner detects the created WorkItem,
  * acts on it, and allows the workflow to resume.
  *
  * <p>

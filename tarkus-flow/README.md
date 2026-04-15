@@ -40,7 +40,7 @@ which the workflow can catch and handle.
 
 ## Usage — TarkusFlow DSL (recommended)
 
-Extend `TarkusFlow` instead of `Flow` to get the `tarkus()` builder alongside
+Extend `TarkusFlow` instead of `Flow` to get the `workItem()` builder alongside
 `function()`, `agent()`, and other Quarkus-Flow task types:
 
 ```java
@@ -51,7 +51,7 @@ public class DocumentApprovalWorkflow extends TarkusFlow {
     public Workflow descriptor() {
         return workflow("document-approval")
                 .tasks(
-                        tarkus("legalReview")
+                        workItem("legalReview")
                                 .title("Legal review required")
                                 .description("Review the attached contract for compliance issues.")
                                 .candidateGroups("legal-team")
@@ -63,7 +63,7 @@ public class DocumentApprovalWorkflow extends TarkusFlow {
 }
 ```
 
-The `tarkus()` call creates a `TarkusTaskBuilder`. Calling `.buildTask(InputClass.class)`
+The `workItem()` call creates a `TarkusTaskBuilder`. Calling `.buildTask(InputClass.class)`
 produces a `FuncTaskConfigurer` that Quarkus-Flow wires into the workflow like any other task.
 
 ### TarkusTaskBuilder options
@@ -116,8 +116,8 @@ or a failed Uni with `WorkItemResolutionException` if rejected or cancelled.
 
 | Class | Role |
 |---|---|
-| `TarkusFlow` | Base class — extend instead of `Flow` to access the `tarkus()` DSL method |
-| `TarkusTaskBuilder` | Fluent builder returned by `tarkus()` — configures the WorkItem and produces a `FuncTaskConfigurer` |
+| `TarkusFlow` | Base class — extend instead of `Flow` to access the `workItem()` DSL method |
+| `TarkusTaskBuilder` | Fluent builder returned by `workItem()` — configures the WorkItem and produces a `FuncTaskConfigurer` |
 | `HumanTaskFlowBridge` | CDI bean — creates WorkItems and registers their futures; inject directly for lower-level control |
 | `PendingWorkItemRegistry` | Internal — holds `CompletableFuture<String>` per pending WorkItem; resolved when the human acts |
 | `WorkItemFlowEventListener` | Internal — observes `WorkItemLifecycleEvent` CDI events and completes or fails pending futures |
@@ -134,7 +134,7 @@ If the WorkItem is rejected or cancelled, the `Uni` fails with `WorkItemResoluti
 Handle it in the workflow like any other task failure:
 
 ```java
-tarkus("legalReview")
+workItem("legalReview")
         .title("Legal review required")
         .candidateGroups("legal-team")
         .buildTask(DocumentDraft.class)

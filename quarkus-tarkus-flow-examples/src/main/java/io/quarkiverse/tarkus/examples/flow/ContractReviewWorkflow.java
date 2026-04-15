@@ -14,10 +14,10 @@ import io.serverlessworkflow.api.types.Workflow;
  * A multi-step contract review workflow demonstrating the TarkusFlow DSL.
  *
  * <p>
- * This workflow mixes automated {@code function()} steps with human {@code tarkus()} steps,
+ * This workflow mixes automated {@code function()} steps with human {@code workItem()} steps,
  * showing how a business process can hand off between machines and people without
  * any explicit thread management or polling — Quarkus-Flow suspends the workflow
- * coroutine at each {@code tarkus()} step and resumes it when a human acts.
+ * coroutine at each {@code workItem()} step and resumes it when a human acts.
  *
  * <h2>Workflow steps</h2>
  * <ol>
@@ -70,7 +70,7 @@ public class ContractReviewWorkflow extends TarkusFlow {
                         // payloadFrom() serialises the validated contract fields as JSON context
                         // so the reviewer sees the contract details without leaving the inbox.
                         // Suspends until a team member claims, starts, and completes the WorkItem.
-                        tarkus("legalReview")
+                        workItem("legalReview")
                                 .title("Legal review: contract approval")
                                 .description(
                                         "Review contract terms for legal compliance. "
@@ -91,7 +91,7 @@ public class ContractReviewWorkflow extends TarkusFlow {
                         // Receives the legal team's resolution JSON as its input.
                         // CRITICAL priority ensures it surfaces at the top of the inbox.
                         // Suspends until the executive claims and completes the WorkItem.
-                        tarkus("executiveSignOff")
+                        workItem("executiveSignOff")
                                 .title("Executive sign-off required")
                                 .description(
                                         "Legal team has approved. Final executive sign-off before contract execution. "

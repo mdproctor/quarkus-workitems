@@ -25,7 +25,7 @@ public class ContractReviewWorkflow extends TarkusFlow {
                 .tasks(
 
                         // Step 1: automated — runs immediately, no human involved
-                        FuncDSL.function("validate",
+                        fn("validate",
                                 (Map submission) -> Map.of(
                                         "contractId", submission.get("contractId"),
                                         "party",      submission.get("party"),
@@ -34,7 +34,7 @@ public class ContractReviewWorkflow extends TarkusFlow {
                                 Map.class),
 
                         // Step 2: human — any member of legal-team can claim from the inbox
-                        tarkus("legalReview")
+                        workItem("legalReview")
                                 .title("Legal review: contract approval")
                                 .description("Review contract terms for legal compliance. "
                                         + "Check liability clauses, IP ownership, and termination conditions.")
@@ -46,7 +46,7 @@ public class ContractReviewWorkflow extends TarkusFlow {
                                 .buildTask(Map.class),
 
                         // Step 3: human — directly assigned to a named executive
-                        tarkus("executiveSignOff")
+                        workItem("executiveSignOff")
                                 .title("Executive sign-off required")
                                 .description("Legal team has approved. Final sign-off before execution.")
                                 .assigneeId("exec-officer")
@@ -54,7 +54,7 @@ public class ContractReviewWorkflow extends TarkusFlow {
                                 .buildTask(String.class),
 
                         // Step 4: automated — records the execution after both approvals
-                        FuncDSL.function("countersign",
+                        fn("countersign",
                                 (String executiveDecision) -> "EXECUTED — " + executiveDecision,
                                 String.class))
 
@@ -80,7 +80,7 @@ No threads are blocked during suspension. The workflow coroutine parks and resum
 
 | Feature | Where |
 |---|---|
-| `tarkus("name")` | Both human steps |
+| `workItem("name")` | Both human steps |
 | `.title(String)` | Both human steps — shown in the inbox |
 | `.description(String)` | Both human steps — context for the reviewer |
 | `.candidateGroups(String)` | legalReview — routes to any member of `legal-team` |
@@ -88,7 +88,7 @@ No threads are blocked during suspension. The workflow coroutine parks and resum
 | `.priority(WorkItemPriority.HIGH)` | legalReview |
 | `.priority(WorkItemPriority.CRITICAL)` | executiveSignOff |
 | `.payloadFrom(fn)` | legalReview — extracts contract JSON from the workflow step input |
-| `FuncDSL.function()` mixed with `tarkus()` | validate + countersign steps |
+| `fn()` mixed with `workItem()` | validate + countersign steps |
 
 ---
 
@@ -206,5 +206,5 @@ Add the dependency:
 </dependency>
 ```
 
-Extend `TarkusFlow` instead of `Flow`, and use `tarkus("stepName")` wherever your workflow
+Extend `TarkusFlow` instead of `Flow`, and use `workItem("stepName")` wherever your workflow
 needs to suspend for a human decision. See `quarkus-tarkus-flow/README.md` for the full API reference.

@@ -12,7 +12,7 @@ import io.serverlessworkflow.fluent.func.dsl.FuncDSL;
  * Base class for Quarkus-Flow workflow definitions that include Tarkus WorkItem steps.
  *
  * <p>
- * Extend this instead of {@link Flow} to gain access to the {@link #tarkus(String)}
+ * Extend this instead of {@link Flow} to gain access to the {@link #workItem(String)}
  * DSL method, which creates WorkItem suspension steps that integrate naturally with
  * {@code function()}, {@code agent()}, and other quarkus-flow task types.
  *
@@ -26,7 +26,7 @@ import io.serverlessworkflow.fluent.func.dsl.FuncDSL;
  *         public Workflow descriptor() {
  *             return workflow("document-approval")
  *                     .tasks(
- *                             tarkus("legalReview")
+ *                             workItem("legalReview")
  *                                     .title("Legal review required")
  *                                     .candidateGroups("legal-team")
  *                                     .priority(WorkItemPriority.HIGH)
@@ -49,7 +49,7 @@ public abstract class TarkusFlow extends Flow {
      * @param name unique task name within the workflow definition
      * @return a builder for configuring the WorkItem parameters
      */
-    protected TarkusTaskBuilder tarkus(final String name) {
+    protected TarkusTaskBuilder workItem(final String name) {
         return new TarkusTaskBuilder(name, tarkusBridge);
     }
 
@@ -58,13 +58,13 @@ public abstract class TarkusFlow extends Flow {
      *
      * <p>
      * Shorthand for {@link FuncDSL#function(String, Function, Class)} that mirrors
-     * {@link #tarkus(String)} so automated and human steps read at the same visual level:
+     * {@link #workItem(String)} so automated and human steps read at the same visual level:
      *
      * <pre>{@code
      * return workflow("my-workflow")
      *         .tasks(
      *                 fn("validate", (MyInput i) -> process(i), MyInput.class),
-     *                 tarkus("humanReview").title("Review result").buildTask(MyResult.class),
+     *                 workItem("humanReview").title("Review result").buildTask(MyResult.class),
      *                 fn("finalise", (String resolution) -> archive(resolution), String.class))
      *         .build();
      * }</pre>

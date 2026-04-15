@@ -29,7 +29,7 @@ import io.smallrye.mutiny.Uni;
  * }</pre>
  *
  * <p>
- * Prefer {@link TarkusFlow} with the {@code tarkus()} DSL builder for a more concise syntax.
+ * Prefer {@link TarkusFlow} with the {@code workItem()} DSL builder for a more concise syntax.
  */
 @ApplicationScoped
 public class HumanTaskFlowBridge {

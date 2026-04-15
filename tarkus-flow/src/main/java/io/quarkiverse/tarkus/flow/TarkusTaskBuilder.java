@@ -12,12 +12,12 @@ import io.smallrye.mutiny.Uni;
  * within Quarkus-Flow workflow definitions.
  *
  * <p>
- * Obtained via {@link TarkusFlow#tarkus(String)}.
+ * Obtained via {@link TarkusFlow#workItem(String)}.
  *
  * <pre>{@code
  * return workflow("document-approval")
  *         .tasks(
- *                 tarkus("legalReview")
+ *                 workItem("legalReview")
  *                         .title("Legal review required")
  *                         .candidateGroups("legal-team")
  *                         .priority(WorkItemPriority.HIGH)
