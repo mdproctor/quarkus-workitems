@@ -31,11 +31,12 @@ Maven multi-module layout following Quarkiverse conventions:
 | Module | Artifact | Purpose |
 |---|---|---|
 | Parent | `quarkus-workitems-parent` | BOM, version management |
-| Runtime | `quarkus-workitems` | Core — WorkItem model, storage SPI, JPA defaults, service, REST API, lifecycle engine |
+| Runtime | `quarkus-workitems` | Core — WorkItem model, storage SPI, JPA defaults, service, REST API, lifecycle engine, labels, vocabulary |
 | Deployment | `quarkus-workitems-deployment` | Build-time processor — feature registration, native config |
 | Testing | `quarkus-workitems-testing` | `InMemoryWorkItemRepository` — no datasource needed for unit tests |
 | Flow | `quarkus-workitems-flow` | Quarkus-Flow integration — `WorkItemsFlow` DSL base class, `HumanTaskFlowBridge`, `WorkItemFlowEventListener` |
 | Ledger | `quarkus-workitems-ledger` | Optional accountability module — command/event ledger, SHA-256 hash chain, peer attestation, EigenTrust reputation. Extends `io.quarkiverse.ledger:quarkus-ledger` (shared base library — see ADR-0001). Zero core impact when absent. |
+| Queues | `quarkus-workitems-queues` | Optional label-based work queues — `WorkItemFilter` (JEXL/JQ/Lambda), `FilterChain` derivation graph with cascade delete, `QueueView` named label-pattern queries, soft assignment (`relinquishable` flag). See ADR-0002. Zero core impact when absent. |
 | Examples | `quarkus-workitems-examples` | Runnable scenario demos — 4 `@QuarkusTest` scenarios covering every ledger/audit capability via `POST /examples/{name}/run` |
 | Flow Examples | `quarkus-workitems-flow-examples` | WorkItemsFlow DSL showcase — contract review workflow mixing automated `function()` and human `workItem()` steps |
 | Integration Tests | `integration-tests` | Black-box `@QuarkusIntegrationTest` suite and native image validation |
@@ -234,17 +235,18 @@ Consuming app owns all datasource config.
 
 | Phase | Status | What |
 |---|---|---|
-| **1 — Core data model** | ✅ Complete | Storage SPI, JPA defaults, InMemory (testing module), WorkItem + AuditEntry entities, Flyway V1, WorkItemService, WorkItemsConfig |
+| **1 — Core data model** | ✅ Complete | Storage SPI, JPA defaults, InMemory (testing module), WorkItem + AuditEntry entities, Flyway V1+V2+V3, WorkItemService, WorkItemsConfig, WorkItemLabel (MANUAL/INFERRED), LabelVocabulary + LabelDefinition |
 | **2 — REST API** | ✅ Complete | WorkItemResource — 13 endpoints, DTOs, exception mappers |
 | **3 — Lifecycle engine** | ✅ Complete | ExpiryCleanupJob, ClaimDeadlineJob, EscalationPolicy SPI + 3 implementations |
 | **4 — CDI events** | ✅ Complete | WorkItemLifecycleEvent on all transitions; rationale + planRef fields |
 | **5 — Quarkus-Flow integration** | ✅ Complete | `quarkus-workitems-flow` — WorkItemsFlow DSL, HumanTaskFlowBridge, Uni<String> suspension |
 | **6 — Ledger module** | ✅ Complete | `quarkus-workitems-ledger` — command/event model, hash chain, attestation, EigenTrust; optional, zero core impact |
-| **7 — Native image** | ✅ Complete | GraalVM 25 native build, 19 @QuarkusIntegrationTest tests, 0.084s startup |
+| **7 — Label-based queues** | ✅ Complete | `quarkus-workitems-queues` — label model (MANUAL/INFERRED), vocabulary (GLOBAL→PERSONAL scopes), filter engine (JEXL/JQ/Lambda, multi-pass propagation, cascade delete via FilterChain), QueueView named queries, soft assignment. See ADR-0002 and `docs/specs/2026-04-15-queues-design.md` |
+| **8 — Native image** | ✅ Complete | GraalVM 25 native build, 19 @QuarkusIntegrationTest tests, 0.084s startup |
 | **Examples** | ✅ Complete | `quarkus-workitems-examples` (4 scenarios, all ledger capabilities) + `quarkus-workitems-flow-examples` (WorkItemsFlow DSL showcase) |
-| **8 — CaseHub integration** | ⏸ Blocked | `quarkus-workitems-casehub` — CaseHub WorkerRegistry adapter (awaiting CaseHub stable API) |
-| **9 — Qhorus integration** | ⏸ Blocked | `quarkus-workitems-qhorus` — MCP tools (awaiting Qhorus stable API) |
-| **10 — ProvenanceLink** | ⏸ Blocked | Typed PROV-O causal graph — awaiting CaseHub + Qhorus integrations (issue #39) |
+| **9 — CaseHub integration** | ⏸ Blocked | `quarkus-workitems-casehub` — CaseHub WorkerRegistry adapter (awaiting CaseHub stable API) |
+| **10 — Qhorus integration** | ⏸ Blocked | `quarkus-workitems-qhorus` — MCP tools (awaiting Qhorus stable API) |
+| **11 — ProvenanceLink** | ⏸ Blocked | Typed PROV-O causal graph — awaiting CaseHub + Qhorus integrations (issue #39) |
 
 ---
 

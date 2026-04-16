@@ -142,6 +142,7 @@ curl -X PUT "http://localhost:8080/workitems/{id}/complete?actor=alice" \
 ## Key Features
 
 - **Work queues** — `candidateGroups` and `candidateUsers` allow routing WorkItems to pools; any eligible member can claim via `/inbox`.
+- **Labels and label-based queues (`quarkus-workitems-queues`)** — WorkItems carry 0..n path-structured labels (e.g. `legal/contracts/nda`). Labels are either `MANUAL` (human-applied) or `INFERRED` (applied and maintained by the filter engine). Filters are JEXL, JQ, or CDI Lambda expressions that fire on every WorkItem lifecycle event. A `QueueView` is a named label-pattern query — any WorkItem carrying a matching label appears in the queue automatically. The queues module is optional; the core extension is unchanged when absent.
 - **Delegation with ownership tracking** — the original actor becomes `owner` on first delegation; the full delegation chain is preserved in `delegationChain`.
 - **Claim and completion deadlines** — `claimDeadline` and `expiresAt`; both configurable with per-application defaults.
 - **Pluggable escalation policies** — `notify`, `reassign`, or `auto-reject` on deadline breach; implement `EscalationPolicy` for custom behaviour (Slack alerts, PagerDuty, etc.).
@@ -159,7 +160,7 @@ curl -X PUT "http://localhost:8080/workitems/{id}/complete?actor=alice" \
   - **Causal linking** — `causedByEntryId` links entries to the entry that caused them (e.g. a delegation entry linked back to the preceding resume)
   - **EigenTrust reputation scoring** — a nightly batch computes actor trust scores from ledger history using exponential time-decay weighting; trust scores influence routing suggestions and are queryable via `GET /workitems/actors/{actorId}/trust`
 - **Storage SPI** — `WorkItemRepository` and `AuditEntryRepository` interfaces; default JPA (PostgreSQL/H2) implementations, overridable via `@Alternative @Priority(1)`.
-- **Native image support** — target: GraalVM 25 native image (validation in Phase 8).
+- **Native image support** — validated: GraalVM 25 native image, 0.084s startup, 19 `@QuarkusIntegrationTest` tests.
 
 ---
 
@@ -186,6 +187,7 @@ All properties are prefixed with `quarkus.workitems`.
 | `quarkus-workitems-testing` | `InMemoryWorkItemRepository` + `InMemoryAuditEntryRepository` for unit tests without a datasource |
 | `quarkus-workitems-flow` | Quarkus-Flow integration — `WorkItemsFlow` base class, `WorkItemTaskBuilder` DSL, `HumanTaskFlowBridge`, `WorkItemFlowEventListener` |
 | `quarkus-workitems-ledger` | Optional accountability module — command/event ledger, SHA-256 hash chain, peer attestation, EigenTrust reputation scoring. Zero impact on the core extension when absent. |
+| `quarkus-workitems-queues` | Optional label-based work queues — saved and ad-hoc filters (JEXL, JQ, Lambda CDI), `FilterChain` derivation graph, `QueueView` named label-pattern queries, soft assignment. Zero impact on the core extension when absent. |
 
 Future modules (not yet released): `quarkus-workitems-casehub`, `quarkus-workitems-qhorus`, `quarkus-workitems-mongodb`, `quarkus-workitems-redis`.
 
@@ -222,6 +224,7 @@ Quarkus WorkItems is part of the Quarkus Native AI Agent Ecosystem, which also i
 - [**Integration Guide**](docs/integration-guide.md) — standalone REST, Quarkus-Flow DSL (`WorkItemsFlow`), CDI event observation, custom escalation policies, unit testing without a datasource, ledger module setup
 - [**Design Specification**](docs/specs/2026-04-14-tarkus-design.md) — full data model, storage SPI, lifecycle engine, future considerations
 - [**Ledger Design**](docs/specs/ledger-design.md) — ledger module architecture: command/event model, hash chain, attestation, EigenTrust reputation
+- [**Queues Design**](docs/specs/2026-04-15-queues-design.md) — label model, vocabulary, filter engine, FilterChain, queue views
 - [**Implementation Tracker**](docs/DESIGN.md) — component structure, domain model, services, build roadmap
 
 ---

@@ -104,6 +104,11 @@ quarkus-workitems/
 
 **Integration modules (built):**
 - `workitems-flow/` — Quarkus-Flow CDI bridge (`HumanTaskFlowBridge`, `PendingWorkItemRegistry`, `WorkItemFlowEventListener`)
+- `quarkus-workitems-ledger/` — optional accountability module (command/event ledger, hash chain, attestation, EigenTrust)
+- `quarkus-workitems-queues/` — optional label-based queue module (`WorkItemFilter`, `FilterChain`, `QueueView`, `WorkItemQueueState`)
+  - `api/`: `FilterResource` (/filters), `QueueResource` (/queues), `QueueStateResource` (/workitems/{id}/relinquishable)
+  - `model/`: `FilterScope`, `FilterAction`, `WorkItemFilter`, `FilterChain`, `QueueView`, `WorkItemQueueState`
+  - `service/`: `FilterConditionEvaluator` SPI, `JexlConditionEvaluator`, `JqConditionEvaluator`, `WorkItemFilterBean`, `FilterEngine`, `FilterEngineImpl`, `FilterEvaluationObserver`
 - `quarkus-workitems-examples/` — runnable scenario demos; 4 `@QuarkusTest` scenarios covering every ledger/audit capability, each runs via `POST /examples/{name}/run`
 - `integration-tests/` — `@QuarkusIntegrationTest` suite and native image validation (19 tests, 0.084s native startup)
 
@@ -126,6 +131,9 @@ JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl runtime
 
 # Run tests (ledger module)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl quarkus-workitems-ledger
+
+# Run tests (queues module)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl quarkus-workitems-queues
 
 # Run tests (examples module)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl quarkus-workitems-examples

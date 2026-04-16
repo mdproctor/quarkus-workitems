@@ -337,6 +337,19 @@ Returned by all lifecycle endpoints and list endpoints.
 | `startedAt` | ISO-8601 instant | When `IN_PROGRESS` began |
 | `completedAt` | ISO-8601 instant | When a terminal state was reached |
 | `suspendedAt` | ISO-8601 instant | When `SUSPENDED` |
+| `labels` | WorkItemLabelResponse[] | Labels attached to this WorkItem (empty array if none) |
+
+---
+
+### WorkItemLabelResponse
+
+Embedded in `WorkItemResponse.labels`.
+
+| Field | Type | Description |
+|---|---|---|
+| `path` | string | Label path, e.g. `legal/contracts/nda` |
+| `persistence` | LabelPersistence | `MANUAL` (human-applied) or `INFERRED` (filter-applied, recomputed on mutation) |
+| `appliedBy` | string | userId (MANUAL) or filterId (INFERRED) |
 
 ---
 
@@ -439,6 +452,335 @@ The `WorkItemLifecycleEvent` record fields: `type`, `source` (`/workitems/{id}`)
 |---|---|---|
 | `404 Not Found` | WorkItem with the given `id` does not exist | `{"error": "WorkItem not found: {id}"}` |
 | `409 Conflict` | Transition is not valid for the current status | `{"error": "Cannot {action} WorkItem in status: {STATUS}"}` |
+
+---
+
+## Label API (quarkus-workitems core)
+
+Labels are path-structured tags on WorkItems (e.g. `legal/contracts/nda`). `MANUAL` labels are human-applied; `INFERRED` labels are maintained by the filter engine in `quarkus-workitems-queues`.
+
+---
+
+### GET /workitems?label={pattern}
+
+Returns WorkItems with at least one label matching the pattern.
+
+**Query parameter:** `label` — label path or wildcard pattern:
+- `legal/contracts` — exact match
+- `legal/*` — one segment below (matches `legal/contracts`, not `legal/contracts/nda`)
+- `legal/**` — full subtree (matches any path starting with `legal/`)
+
+**Response:** `200 OK` — `WorkItemResponse[]`
+
+```bash
+curl "http://localhost:8080/workitems?label=legal/**"
+```
+
+---
+
+### POST /workitems/{id}/labels
+
+Adds a `MANUAL` label to an existing WorkItem. The label path must be declared in an accessible vocabulary.
+
+**Path parameter:** `id` — UUID
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `path` | string | yes | Label path (must exist in vocabulary) |
+| `appliedBy` | string | no | User ID applying the label |
+
+**Response:** `200 OK` — `WorkItemResponse` (with updated labels list)
+
+**Errors:** `400` if path is blank; `404` if WorkItem not found.
+
+```bash
+curl -X POST "http://localhost:8080/workitems/{id}/labels" \
+  -H 'Content-Type: application/json' \
+  -d '{"path": "legal/contracts", "appliedBy": "alice"}'
+```
+
+---
+
+### DELETE /workitems/{id}/labels?path={labelPath}
+
+Removes a `MANUAL` label from a WorkItem. `INFERRED` labels cannot be removed via this endpoint — they are managed by the filter engine.
+
+**Path parameter:** `id` — UUID
+**Query parameter:** `path` — exact label path to remove
+
+**Response:** `200 OK` — `WorkItemResponse` (with label removed)
+
+**Errors:** `404` if WorkItem not found or label not present.
+
+```bash
+curl -X DELETE "http://localhost:8080/workitems/{id}/labels?path=legal/contracts"
+```
+
+---
+
+## Vocabulary API (quarkus-workitems core)
+
+Labels must be declared in a vocabulary before they can be applied. Vocabularies are scoped: `GLOBAL` (platform-wide) → `ORG` → `TEAM` → `PERSONAL`. A GLOBAL vocabulary is seeded by Flyway with common labels (`intake`, `intake/triage`, `priority/high`, `priority/critical`, `legal`, `legal/contracts`, `legal/compliance`).
+
+---
+
+### GET /vocabulary
+
+Lists all label definitions accessible to the caller (all scopes at or above `PERSONAL`).
+
+**Response:** `200 OK` — array of definition objects: `{id, path, vocabularyId, description, createdBy, createdAt}`
+
+```bash
+curl http://localhost:8080/vocabulary
+```
+
+---
+
+### POST /vocabulary/{scope}
+
+Adds a label definition to the vocabulary at the given scope. Currently only `GLOBAL` scope is supported; `ORG`, `TEAM`, and `PERSONAL` return `501` (deferred pending authentication context).
+
+**Path parameter:** `scope` — `GLOBAL`, `ORG`, `TEAM`, or `PERSONAL`
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `path` | string | yes | Label path to declare, e.g. `finance/invoices` |
+| `description` | string | no | Human-readable description |
+| `addedBy` | string | no | User ID declaring the label |
+
+**Response:** `201 Created` — `{id, path, scope}`
+
+**Errors:** `400` if path is blank or scope is invalid; `501` for non-GLOBAL scopes.
+
+```bash
+curl -X POST http://localhost:8080/vocabulary/GLOBAL \
+  -H 'Content-Type: application/json' \
+  -d '{"path": "finance/invoices", "description": "Invoice approval items", "addedBy": "alice"}'
+```
+
+---
+
+## Queue API (quarkus-workitems-queues)
+
+These endpoints are only present when `quarkus-workitems-queues` is on the classpath. They activate automatically via CDI.
+
+A **queue** is a `QueueView` — a named label-pattern query. WorkItems appear in the queue when they carry a matching label. `INFERRED` labels are applied by the filter engine; `MANUAL` labels are applied by users. Adding `quarkus-workitems-queues` as a dependency wires up the filter evaluation engine automatically.
+
+---
+
+### GET /filters
+
+Lists all saved filters visible to the caller.
+
+**Response:** `200 OK` — array of `{id, name, scope, conditionLanguage, active}`
+
+```bash
+curl http://localhost:8080/filters
+```
+
+---
+
+### POST /filters
+
+Creates a saved filter. On every `WorkItemLifecycleEvent`, active filters evaluate their condition and apply `INFERRED` labels to matching WorkItems.
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Human-readable filter name |
+| `scope` | FilterScope | no | `PERSONAL`, `TEAM`, or `ORG` (default: `ORG`) |
+| `ownerId` | string | no | Owner user ID (PERSONAL) or group ID (TEAM) |
+| `conditionLanguage` | string | yes | `jexl` or `jq` (lambda filters are CDI beans, not stored via REST) |
+| `conditionExpression` | string | yes | The condition expression |
+| `actions` | FilterAction[] | yes | Actions to apply when condition matches |
+
+**FilterAction:**
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | Always `"APPLY_LABEL"` |
+| `labelPath` | string | Label path to apply as `INFERRED` |
+
+**Condition expression fields available (JEXL and JQ):**
+
+| Field | JEXL | JQ |
+|---|---|---|
+| Status | `status == 'HIGH'` | `.status == "HIGH"` |
+| Priority | `priority == 'HIGH'` | `.priority == "HIGH"` |
+| Assignee | `assigneeId == null` | `.assigneeId == null` |
+| Category | `category == 'legal'` | `.category == "legal"` |
+| Labels | `labels.contains('legal/contracts')` | `.labels \| contains(["legal/contracts"])` |
+
+**Response:** `201 Created` — `{id, name, active}`
+
+**Errors:** `400` if `conditionLanguage` is `"lambda"` (CDI beans only).
+
+```bash
+# JEXL filter: route high-priority unassigned items to intake queue
+curl -X POST http://localhost:8080/filters \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "High priority triage",
+    "scope": "ORG",
+    "conditionLanguage": "jexl",
+    "conditionExpression": "priority == '"'"'HIGH'"'"' && assigneeId == null",
+    "actions": [{"type": "APPLY_LABEL", "labelPath": "intake/triage"}]
+  }'
+```
+
+---
+
+### PUT /filters/{id}
+
+Updates a saved filter's name, condition expression, or actions.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** Same as POST (partial — only provided fields are updated).
+
+**Response:** `200 OK` — `{id, name}`
+
+**Error:** `404` if filter not found.
+
+---
+
+### DELETE /filters/{id}
+
+Deletes a saved filter and cascades: all `INFERRED` labels applied by this filter are removed from affected WorkItems. WorkItems are then re-evaluated by remaining active filters to restore any labels still justified.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404` if filter not found.
+
+```bash
+curl -X DELETE http://localhost:8080/filters/{id}
+```
+
+---
+
+### POST /filters/evaluate
+
+Ad-hoc filter evaluation. Evaluates a condition expression against a provided WorkItem snapshot without saving the filter.
+
+**Request body:**
+
+| Field | Type | Description |
+|---|---|---|
+| `conditionLanguage` | string | `jexl` or `jq` |
+| `conditionExpression` | string | The condition to evaluate |
+| `workItem` | object | WorkItem fields to evaluate against (`title`, `status`, `priority`, `assigneeId`, `category`) |
+
+**Response:** `200 OK` — `{matches: boolean}`
+
+```bash
+curl -X POST http://localhost:8080/filters/evaluate \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "conditionLanguage": "jexl",
+    "conditionExpression": "priority == '"'"'HIGH'"'"'",
+    "workItem": {"priority": "HIGH", "status": "PENDING"}
+  }'
+```
+
+---
+
+### GET /queues
+
+Lists all `QueueView` objects visible to the caller.
+
+**Response:** `200 OK` — array of `{id, name, labelPattern, scope}`
+
+```bash
+curl http://localhost:8080/queues
+```
+
+---
+
+### POST /queues
+
+Creates a named queue view over a label pattern.
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Human-readable queue name |
+| `labelPattern` | string | yes | Label pattern: exact, `legal/*`, or `legal/**` |
+| `scope` | FilterScope | no | `PERSONAL`, `TEAM`, or `ORG` (default: `ORG`) |
+| `ownerId` | string | no | Owner user ID or group ID |
+| `sortField` | string | no | `createdAt` (default), `title`, or `priority` |
+| `sortDirection` | string | no | `ASC` (default) or `DESC` |
+
+**Response:** `201 Created` — `{id, name, labelPattern}`
+
+**Error:** `400` if `labelPattern` is blank.
+
+```bash
+curl -X POST http://localhost:8080/queues \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Legal triage",
+    "labelPattern": "intake/**",
+    "scope": "TEAM",
+    "sortField": "createdAt",
+    "sortDirection": "ASC"
+  }'
+```
+
+---
+
+### GET /queues/{id}
+
+Executes the queue view: returns all WorkItems whose labels match the queue's `labelPattern`, ordered by `sortField`/`sortDirection`.
+
+**Path parameter:** `id` — UUID of the QueueView
+
+**Response:** `200 OK` — `WorkItemResponse[]`
+
+**Error:** `404` if QueueView not found.
+
+```bash
+curl http://localhost:8080/queues/{id}
+```
+
+---
+
+### DELETE /queues/{id}
+
+Deletes a QueueView. Does not affect WorkItem labels.
+
+**Response:** `204 No Content`
+
+---
+
+### PUT /workitems/{id}/relinquishable
+
+Sets or clears the soft-assignment flag. When `relinquishable: true`, the assignee signals that another eligible candidate may claim the WorkItem even though it is `ASSIGNED`.
+
+**Path parameter:** `id` — UUID
+
+**Request body:**
+
+| Field | Type | Description |
+|---|---|---|
+| `relinquishable` | boolean | `true` to mark as available for pickup; `false` to clear |
+
+**Response:** `200 OK` — `{workItemId, relinquishable}`
+
+**Error:** `404` if WorkItem not found.
+
+```bash
+curl -X PUT "http://localhost:8080/workitems/{id}/relinquishable" \
+  -H 'Content-Type: application/json' \
+  -d '{"relinquishable": true}'
+```
 
 ---
 

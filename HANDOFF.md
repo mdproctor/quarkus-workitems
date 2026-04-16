@@ -1,51 +1,66 @@
 # Quarkus WorkItems — Session Handover
-**Date:** 2026-04-15
+**Date:** 2026-04-16
 
 ## Project Status
 
-All phases complete. `quarkus-workitems-examples` module added and fully passing. 0 open actionable issues.
+All planned phases complete. 262 tests passing across all modules. 1 open issue (#39, blocked).
 
 | Module | Tests |
 |---|---|
-| runtime | passing |
+| runtime | 217 |
 | workitems-flow | 32 |
-| quarkus-workitems-ledger | 74 (↑10 this session) |
+| quarkus-workitems-ledger | 74 |
+| quarkus-workitems-queues | 45 |
 | quarkus-workitems-examples | 4 |
+| quarkus-workitems-flow-examples | 2 |
 | testing | 16 |
 | integration-tests | 19 (native) |
 
-## What Changed This Session
+## What Was Built
 
-**New: `quarkus-workitems-examples`** — four runnable scenario endpoints, each covering a distinct set of ledger/audit capabilities. Run via `POST /examples/{name}/run`. All 4 `@QuarkusTest` scenarios pass.
+**Labels + vocabulary (sub-epic #51):**
+- `WorkItemLabel` @Embeddable on `WorkItem`: `path`, `persistence` (MANUAL/INFERRED), `appliedBy`
+- `LabelVocabulary` + `LabelDefinition` (Panache entities, Flyway V2+V3)
+- Vocabulary scopes: GLOBAL → ORG → TEAM → PERSONAL; seeded GLOBAL vocab with 7 common labels
+- `findByLabelPattern()` in repo SPI: exact, `/*`, `/**` wildcard semantics
+- REST: `GET /workitems?label=pattern`, `POST/DELETE /workitems/{id}/labels`, `GET/POST /vocabulary/{scope}`
 
-**Two upstream prerequisites added:**
-- `WorkItemService.complete(+rationale, +planRef)` and `reject(+rationale)` overloads — pass through the lifecycle event for ledger capture
-- `LedgerEventCapture.deriveActorType()` — `agent:` prefix → AGENT, `system:` prefix → SYSTEM
+**quarkus-workitems-queues (sub-epic #52):**
+- `WorkItemFilter` entity + CRUD REST + ad-hoc eval (`POST /filters/evaluate`)
+- `FilterConditionEvaluator` SPI: JEXL (default), JQ (jackson-jq), Lambda (CDI beans)
+- JEXL/JQ contexts expose: status, priority, assigneeId, category, labels (as List<String>)
+- `FilterChain`: filterId → Set<workItemId> inverse index for O(affected) cascade
+- `FilterEngineImpl`: strip INFERRED → multi-pass eval (max 10) → propagation → cascade-correct delete
+- `QueueView` entity + REST: `GET /queues/{id}` returns live label-pattern query with sort
+- `WorkItemQueueState`: relinquishable soft-assignment flag (`PUT /workitems/{id}/relinquishable`)
+- Flyway V2000 namespace (avoids conflicts with core V1-V3 and ledger V1002)
 
-**README ledger section** expanded from 1 bullet to 10 sub-items covering every capability.
-
-**`deployment/pom.xml` fix** — removed spurious `quarkus-ledger-deployment` dependency that violated the Quarkiverse extension-descriptor rule.
-
-**5 garden entries** submitted: 3 gotchas (extension-descriptor constraint, RestAssured Float/Double, quarkus-junit5 naming), 1 technique (@Transactional propagation), 1 undocumented (quarkus-ledger sibling install).
-
-**`mandatory-rules.md` updated** in cc-praxis — new Content Focus rule: omit process/tooling narration from blog entries unless explicitly requested.
+**Documentation sync:**
+- `docs/api-reference.md`: added Label API, Vocabulary API, Filter API, Queue API, QueueState API; WorkItemLabelResponse schema
+- `README.md`: queues in features, modules table, and documentation index
+- `CLAUDE.md`: queues module in project structure and build commands
+- `docs/DESIGN.md`: queues as Phase 7 (complete), updated module table and Phase 1 description
 
 ## Immediate Next Step
 
-No immediate next step — project is in a clean state. Candidates:
-- `workitems-flow/` needs a README (started end of session — see below)
-- Issue #39 — ProvenanceLink PROV-O graph (blocked: CaseHub and Qhorus not ready)
-- Quarkiverse submission (mdproctor → quarkiverse org)
+**Quarkiverse submission** — the extension is feature-complete, tested, native-validated. Path: fork quarkiverse org, wire CI (GitHub Actions, Renovate, docs site), open intake PR.
 
 ## Open Issues
 
 - #39 — ProvenanceLink PROV-O graph (blocked: CaseHub and Qhorus not ready)
 
+## Deferred (queues module)
+
+- `additionalConditions` on `QueueView` — stored but not evaluated (O(n) evaluation per request, deferred)
+- Relinquishable claim relaxation — flag stored, but `PUT /{id}/claim` does not yet check it
+- Non-GLOBAL vocabulary scopes — `POST /vocabulary/ORG|TEAM|PERSONAL` returns 501 (needs auth context)
+
 ## References
 
 | What | Path |
 |---|---|
-| Examples README | `quarkus-workitems-examples/README.md` |
-| Design spec | `docs/specs/2026-04-14-tarkus-design.md` |
+| Queues design spec | `docs/specs/2026-04-15-queues-design.md` |
+| Queues ADR | `adr/0002-labels-as-queues-with-inferred-persistence.md` |
+| API reference | `docs/api-reference.md` |
+| Design tracker | `docs/DESIGN.md` |
 | Ledger design | `docs/specs/ledger-design.md` |
-| Blog (this session) | `blog/2026-04-15-mdp02-examples-that-prove-it.md` |
