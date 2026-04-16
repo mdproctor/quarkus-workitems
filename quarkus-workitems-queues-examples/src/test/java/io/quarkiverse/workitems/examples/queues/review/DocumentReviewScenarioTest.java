@@ -13,7 +13,7 @@ class DocumentReviewScenarioTest {
     @Test
     void documentReview_lambdaOverridesNormalPriorityToUrgent() {
         given()
-                .post("/queue-examples/review/run")
+                .post("/queue-examples/review/run?delay=0")
                 .then()
                 .statusCode(200)
                 .body("scenarioId", equalTo("document-review-pipeline"))

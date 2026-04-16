@@ -6,9 +6,11 @@ import java.util.UUID;
 
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 import org.jboss.logging.Logger;
@@ -89,7 +91,8 @@ public class DocumentReviewScenario {
     @Inject
     WorkItemRepository workItemRepo;
 
-    private void setupFilters() {
+    @Transactional
+    void setupFilters() {
         if (WorkItemFilter.count("name", "Review: Critical → Urgent Tier") > 0) {
             return;
         }
@@ -163,11 +166,13 @@ public class DocumentReviewScenario {
 
     /**
      * Run the document review pipeline scenario end to end.
+     *
+     * @param delayMs milliseconds to pause between steps so a live dashboard can observe each state transition.
+     *        Defaults to 1500ms. Pass {@code ?delay=0} for instant execution (useful in tests).
      */
     @POST
     @Path("/run")
-    @Transactional
-    public QueueScenarioResponse run() {
+    public QueueScenarioResponse run(@QueryParam("delay") @DefaultValue("1500") long delayMs) {
         setupFilters();
 
         final List<QueueScenarioStep> steps = new ArrayList<>();
@@ -194,6 +199,7 @@ public class DocumentReviewScenario {
                 secAdvisory.id,
                 inferredPaths(secAdvisory),
                 manualPaths(secAdvisory)));
+        sleep(delayMs);
 
         // ── Step 2: Release notes — HIGH priority → standard tier ──
         LOG.info("[REVIEW] Step 2/7: Release notes — HIGH priority → standard tier");
@@ -216,6 +222,7 @@ public class DocumentReviewScenario {
                 releaseNotes.id,
                 inferredPaths(releaseNotes),
                 manualPaths(releaseNotes)));
+        sleep(delayMs);
 
         // ── Step 3: Tutorial — NORMAL priority → routine tier ──
         LOG.info("[REVIEW] Step 3/7: Tutorial — NORMAL priority → routine tier");
@@ -238,11 +245,12 @@ public class DocumentReviewScenario {
                 tutorial.id,
                 inferredPaths(tutorial),
                 manualPaths(tutorial)));
+        sleep(delayMs);
 
         // ── Step 4: Reviewer claims the security advisory ──
         LOG.info("[REVIEW] Step 4/7: Senior reviewer claims the security advisory");
         workItemService.claim(secAdvisory.id, "senior-reviewer");
-        final WorkItem afterClaim = workItemRepo.findById(secAdvisory.id).orElseThrow();
+        final WorkItem afterClaim = readFresh(secAdvisory.id);
 
         steps.add(new QueueScenarioStep(4,
                 "Security advisory claimed by senior-reviewer (PENDING→ASSIGNED). " +
@@ -251,11 +259,12 @@ public class DocumentReviewScenario {
                 afterClaim.id,
                 inferredPaths(afterClaim),
                 manualPaths(afterClaim)));
+        sleep(delayMs);
 
         // ── Step 5: Reviewer starts the advisory ──
         LOG.info("[REVIEW] Step 5/7: Reviewer starts reading the security advisory");
         workItemService.start(secAdvisory.id, "senior-reviewer");
-        final WorkItem afterStart = workItemRepo.findById(secAdvisory.id).orElseThrow();
+        final WorkItem afterStart = readFresh(secAdvisory.id);
 
         steps.add(new QueueScenarioStep(5,
                 "Security advisory started (ASSIGNED→IN_PROGRESS). " +
@@ -264,6 +273,7 @@ public class DocumentReviewScenario {
                 afterStart.id,
                 inferredPaths(afterStart),
                 manualPaths(afterStart)));
+        sleep(delayMs);
 
         // ── Step 6: Snapshot — unassigned urgent queue ──
         LOG.info("[REVIEW] Step 6/7: Queue snapshot — review/urgent/unassigned (should be empty)");
@@ -293,6 +303,7 @@ public class DocumentReviewScenario {
                         "review/standard/unassigned: " + standardUnassigned.size(),
                         "review/routine/unassigned: " + routineUnassigned.size()),
                 List.of()));
+        sleep(delayMs);
 
         // ── Step 7: Complete the advisory — leaves all review queues ──
         LOG.info("[REVIEW] Step 7/7: Security advisory approved — leaves all review queues");
@@ -302,7 +313,7 @@ public class DocumentReviewScenario {
                 "{\"approved\": true, \"comments\": \"Accurate, well-structured. Ready to publish.\"}",
                 "Content verified against latest NIST guidelines. No security issues found.",
                 "DOC-REVIEW-POLICY-v1.4");
-        final WorkItem afterComplete = workItemRepo.findById(secAdvisory.id).orElseThrow();
+        final WorkItem afterComplete = readFresh(secAdvisory.id);
 
         steps.add(new QueueScenarioStep(7,
                 "Security advisory completed (IN_PROGRESS→COMPLETED). " +
@@ -335,6 +346,26 @@ public class DocumentReviewScenario {
                 .filter(l -> l.persistence == LabelPersistence.MANUAL)
                 .map(l -> l.path)
                 .toList();
+    }
+
+    /**
+     * Reads a WorkItem in a dedicated REQUIRES_NEW transaction so the caller always
+     * gets the most recently committed state, bypassing any stale request-scoped
+     * Hibernate session first-level cache.
+     */
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    WorkItem readFresh(final UUID id) {
+        return workItemRepo.findById(id).orElseThrow();
+    }
+
+    private static void sleep(final long delayMs) {
+        if (delayMs <= 0)
+            return;
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void persist(final String name, final String lang, final String expr,
