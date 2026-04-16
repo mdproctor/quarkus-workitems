@@ -2,6 +2,7 @@ package io.quarkiverse.workitems.queues.service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -61,6 +62,9 @@ public class JqConditionEvaluator implements FilterConditionEvaluator {
         map.put("category", wi.category);
         map.put("title", wi.title);
         map.put("description", wi.description);
+        map.put("labels", wi.labels != null
+                ? wi.labels.stream().map(l -> l.path).toList()
+                : List.of());
         return map;
     }
 }

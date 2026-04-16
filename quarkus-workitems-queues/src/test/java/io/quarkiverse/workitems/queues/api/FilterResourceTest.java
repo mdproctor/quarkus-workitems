@@ -78,4 +78,19 @@ class FilterResourceTest {
         given().get("/filters").then().statusCode(200)
                 .body("conditionLanguage", not(hasItem("lambda")));
     }
+
+    @Test
+    void updateFilter_changesExpression() {
+        var id = given().contentType(ContentType.JSON)
+                .body("""
+                        {"name":"Update test","scope":"ORG","conditionLanguage":"jexl",
+                         "conditionExpression":"priority == 'HIGH'","actions":[]}""")
+                .post("/filters").then().statusCode(201).extract().path("id");
+
+        given().contentType(ContentType.JSON)
+                .body("""
+                        {"name":"Update test","conditionExpression":"priority == 'NORMAL'"}""")
+                .put("/filters/" + id)
+                .then().statusCode(200).body("name", equalTo("Update test"));
+    }
 }

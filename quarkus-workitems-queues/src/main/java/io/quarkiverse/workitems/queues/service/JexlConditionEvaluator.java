@@ -1,6 +1,7 @@
 package io.quarkiverse.workitems.queues.service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -48,6 +49,10 @@ public class JexlConditionEvaluator implements FilterConditionEvaluator {
         map.put("title", wi.title != null ? wi.title : "");
         map.put("description", wi.description != null ? wi.description : "");
         map.put("candidateGroups", wi.candidateGroups != null ? wi.candidateGroups : "");
+        var labelPaths = wi.labels != null
+                ? wi.labels.stream().map(l -> l.path).toList()
+                : List.of();
+        map.put("labels", labelPaths);
         return map;
     }
 }

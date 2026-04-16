@@ -100,6 +100,13 @@ public class FilterEngineImpl implements FilterEngine {
      * its {@link FilterChain}, then deletes the chain record.
      *
      * <p>
+     * After removing the deleted filter's labels, each affected WorkItem is re-evaluated
+     * against all remaining active filters (excluding the deleted one). This restores any
+     * labels that are still justified by other matching filters — e.g. when two filters
+     * both apply the same label, deleting one should not remove the label if the other
+     * still matches.
+     *
+     * <p>
      * The caller (FilterResource) is responsible for deleting the {@link WorkItemFilter}
      * record itself; this method only cascades the label removal.
      *
@@ -113,16 +120,51 @@ public class FilterEngineImpl implements FilterEngine {
             return;
         }
 
-        final String filterIdStr = filterId.toString();
         for (final UUID workItemId : chain.workItems) {
-            workItemRepo.findById(workItemId).ifPresent(wi -> {
-                wi.labels.removeIf(l -> l.persistence == LabelPersistence.INFERRED
-                        && filterIdStr.equals(l.appliedBy));
-                workItemRepo.save(wi);
-            });
+            workItemRepo.findById(workItemId).ifPresent(wi -> evaluateExcluding(wi, filterId));
         }
 
         chain.delete();
+    }
+
+    /**
+     * Re-evaluates all active filters against the given WorkItem, skipping the filter
+     * identified by {@code excludeFilterId}. Used during cascade delete to restore labels
+     * that are still justified by other active filters.
+     *
+     * @param workItem the WorkItem to re-evaluate; mutated in place and persisted
+     * @param excludeFilterId the filter to skip during re-evaluation
+     */
+    private void evaluateExcluding(final WorkItem workItem, final UUID excludeFilterId) {
+        // Strip all INFERRED labels before re-evaluation
+        workItem.labels.removeIf(l -> l.persistence == LabelPersistence.INFERRED);
+
+        boolean changed = true;
+        int passes = 0;
+        while (changed && passes < MAX_PASSES) {
+            changed = false;
+            passes++;
+
+            for (final WorkItemFilter filter : WorkItemFilter.findActive()) {
+                if (filter.id.equals(excludeFilterId)) {
+                    continue; // skip the filter being deleted
+                }
+                final FilterConditionEvaluator evaluator = registry.find(filter.conditionLanguage);
+                if (evaluator != null && evaluator.evaluate(workItem, filter.conditionExpression)) {
+                    changed |= applyActions(workItem, filter.parseActions(), filter.id.toString());
+                    final FilterChain fc = FilterChain.findOrCreateForFilter(filter.id);
+                    fc.workItems.add(workItem.id);
+                }
+            }
+
+            for (final WorkItemFilterBean bean : lambdaRegistry.all()) {
+                if (bean.matches(workItem)) {
+                    changed |= applyActions(workItem, bean.actions(), bean.getClass().getSimpleName());
+                }
+            }
+        }
+
+        workItemRepo.save(workItem);
     }
 
     /**

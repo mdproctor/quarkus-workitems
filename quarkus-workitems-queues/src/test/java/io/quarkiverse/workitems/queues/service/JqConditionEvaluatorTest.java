@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.workitems.runtime.model.LabelPersistence;
 import io.quarkiverse.workitems.runtime.model.WorkItem;
+import io.quarkiverse.workitems.runtime.model.WorkItemLabel;
 import io.quarkiverse.workitems.runtime.model.WorkItemPriority;
 import io.quarkiverse.workitems.runtime.model.WorkItemStatus;
 
@@ -50,6 +52,13 @@ class JqConditionEvaluatorTest {
     void evaluate_malformed_returnsFalse() {
         var wi = wi(WorkItemStatus.PENDING, WorkItemPriority.NORMAL, null);
         assertThat(evaluator.evaluate(wi, "not valid jq @@@")).isFalse();
+    }
+
+    @Test
+    void evaluate_labelCheck_matchesWorkItemWithLabel() {
+        var wi = wi(WorkItemStatus.PENDING, WorkItemPriority.NORMAL, null);
+        wi.labels.add(new WorkItemLabel("legal/contracts", LabelPersistence.MANUAL, "alice"));
+        assertThat(evaluator.evaluate(wi, ".labels | contains([\"legal/contracts\"])")).isTrue();
     }
 
     private WorkItem wi(final WorkItemStatus s, final WorkItemPriority p, final String a) {

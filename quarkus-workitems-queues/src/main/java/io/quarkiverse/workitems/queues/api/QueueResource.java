@@ -86,10 +86,16 @@ public class QueueResource {
     }
 
     /**
-     * Query the live content of a queue view — returns all WorkItems matching its label pattern.
+     * Query the live content of a queue view — returns all WorkItems matching its label pattern,
+     * sorted by {@code sortField}/{@code sortDirection} stored on the queue view.
+     *
+     * <p>
+     * Note: {@code additionalConditions} is stored on the queue view but not yet evaluated;
+     * all WorkItems matching the label pattern are returned regardless of any additional
+     * condition expression.
      *
      * @param id the queue view UUID
-     * @return 200 with the list of matching WorkItems, or 404 if the queue view is not found
+     * @return 200 with the sorted list of matching WorkItems, or 404 if the queue view is not found
      */
     @GET
     @Path("/{id}")
@@ -99,9 +105,26 @@ public class QueueResource {
         if (q == null) {
             return Response.status(404).entity(Map.of("error", "Queue view not found")).build();
         }
-        final List<WorkItemResponse> items = workItemRepo.findByLabelPattern(q.labelPattern)
-                .stream().map(WorkItemMapper::toResponse).toList();
+        final var items = workItemRepo.findByLabelPattern(q.labelPattern).stream()
+                .map(WorkItemMapper::toResponse)
+                .sorted(buildComparator(q.sortField, q.sortDirection))
+                .toList();
         return Response.ok(items).build();
+    }
+
+    private java.util.Comparator<WorkItemResponse> buildComparator(
+            final String sortField, final String sortDirection) {
+        final boolean asc = !"DESC".equalsIgnoreCase(sortDirection);
+        final java.util.Comparator<WorkItemResponse> base = switch (sortField != null ? sortField : "createdAt") {
+            case "priority" -> java.util.Comparator.comparing(
+                    r -> r.priority() != null ? r.priority().name() : "");
+            case "title" -> java.util.Comparator.comparing(
+                    r -> r.title() != null ? r.title() : "");
+            default -> // createdAt
+                java.util.Comparator.comparing(
+                        r -> r.createdAt() != null ? r.createdAt() : java.time.Instant.EPOCH);
+        };
+        return asc ? base : base.reversed();
     }
 
     /**

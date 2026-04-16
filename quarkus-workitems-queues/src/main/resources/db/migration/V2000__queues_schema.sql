@@ -20,7 +20,7 @@ CREATE TABLE filter_chain (
 
 CREATE TABLE filter_chain_work_item (
     filter_chain_id UUID    NOT NULL REFERENCES filter_chain(id) ON DELETE CASCADE,
-    work_item_id    UUID    NOT NULL,
+    work_item_id    UUID    NOT NULL REFERENCES work_item(id) ON DELETE CASCADE,
     PRIMARY KEY (filter_chain_id, work_item_id)
 );
 
@@ -40,6 +40,6 @@ CREATE TABLE queue_view (
 );
 
 CREATE TABLE work_item_queue_state (
-    work_item_id    UUID        PRIMARY KEY,
+    work_item_id    UUID        PRIMARY KEY REFERENCES work_item(id) ON DELETE CASCADE,
     relinquishable  BOOLEAN     NOT NULL DEFAULT FALSE
 );

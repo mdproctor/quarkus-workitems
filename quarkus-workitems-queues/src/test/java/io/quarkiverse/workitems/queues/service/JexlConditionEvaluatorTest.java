@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.workitems.runtime.model.LabelPersistence;
 import io.quarkiverse.workitems.runtime.model.WorkItem;
+import io.quarkiverse.workitems.runtime.model.WorkItemLabel;
 import io.quarkiverse.workitems.runtime.model.WorkItemPriority;
 import io.quarkiverse.workitems.runtime.model.WorkItemStatus;
 
@@ -63,6 +65,19 @@ class JexlConditionEvaluatorTest {
         var wi = wi(WorkItemStatus.PENDING, WorkItemPriority.NORMAL, null);
         wi.category = "legal";
         assertThat(evaluator.evaluate(wi, "category == 'legal'")).isTrue();
+    }
+
+    @Test
+    void evaluate_labelContains_matchesWorkItemWithLabel() {
+        var wi = wi(WorkItemStatus.PENDING, WorkItemPriority.NORMAL, null);
+        wi.labels.add(new WorkItemLabel("legal/contracts", LabelPersistence.MANUAL, "alice"));
+        assertThat(evaluator.evaluate(wi, "labels.contains('legal/contracts')")).isTrue();
+    }
+
+    @Test
+    void evaluate_labelNotContains_noMatch() {
+        var wi = wi(WorkItemStatus.PENDING, WorkItemPriority.NORMAL, null);
+        assertThat(evaluator.evaluate(wi, "labels.contains('legal/contracts')")).isFalse();
     }
 
     private WorkItem wi(final WorkItemStatus s, final WorkItemPriority p, final String assigneeId) {

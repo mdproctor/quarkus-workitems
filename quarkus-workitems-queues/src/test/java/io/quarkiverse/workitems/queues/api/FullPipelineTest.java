@@ -77,6 +77,41 @@ class FullPipelineTest {
     }
 
     @Test
+    void deleteOneFilter_labelSurvives_whenOtherFilterStillMatches() {
+        // Both filters apply the same label — deleting one should not remove the label
+        // if the other filter still matches the WorkItem
+        var filterAId = given().contentType(ContentType.JSON)
+                .body("""
+                        {"name":"Survive A","scope":"ORG","conditionLanguage":"jexl",
+                         "conditionExpression":"priority == 'HIGH'",
+                         "actions":[{"type":"APPLY_LABEL","labelPath":"shared/label-survive-test"}]}""")
+                .post("/filters").then().statusCode(201).extract().path("id");
+
+        given().contentType(ContentType.JSON)
+                .body("""
+                        {"name":"Survive B","scope":"ORG","conditionLanguage":"jexl",
+                         "conditionExpression":"status == 'PENDING'",
+                         "actions":[{"type":"APPLY_LABEL","labelPath":"shared/label-survive-test"}]}""")
+                .post("/filters").then().statusCode(201);
+
+        // Create WorkItem matching both conditions (HIGH + PENDING)
+        var workItemId = given().contentType(ContentType.JSON)
+                .body("""
+                        {"title":"Survive test","priority":"HIGH","createdBy":"alice"}""")
+                .post("/workitems").then().statusCode(201).extract().path("id");
+
+        // Label should be present from at least one of the filters
+        given().get("/workitems/" + workItemId).then().statusCode(200)
+                .body("labels.path", hasItem("shared/label-survive-test"));
+
+        // Delete filter A — filter B still matches PENDING, so the label should survive
+        given().delete("/filters/" + filterAId).then().statusCode(204);
+
+        given().get("/workitems/" + workItemId).then().statusCode(200)
+                .body("labels.path", hasItem("shared/label-survive-test"));
+    }
+
+    @Test
     void updateWorkItem_statusChange_reEvaluatesFilters() {
         // Filter: PENDING → intake
         given().contentType(ContentType.JSON)
