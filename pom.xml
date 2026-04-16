@@ -27,6 +27,7 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
     <module>workitems-flow</module>
     <module>quarkus-workitems-ledger</module>
     <module>quarkus-workitems-queues</module>
+    <module>quarkus-workitems-queues-examples</module>
     <module>quarkus-workitems-examples</module>
     <module>quarkus-workitems-flow-examples</module>
 
