@@ -6,7 +6,7 @@ target/
 .DS_Store
 .claude/
 # Stray Maven artifacts produced when mvn runs from project root
-META-INF/
-io/
+/META-INF/
+/io/
 /application.properties
 db/
