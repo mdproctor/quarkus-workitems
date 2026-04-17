@@ -256,8 +256,8 @@ class LedgerIntegrationTest {
 
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
         assertThat(entries).hasSize(1);
-        assertThat(entries.get(0).decisionContext).isNotNull();
-        assertThat(entries.get(0).decisionContext).containsIgnoringCase("PENDING");
+        assertThat(entries.get(0).compliance().map(c -> c.decisionContext).orElse(null)).isNotNull();
+        assertThat(entries.get(0).compliance().map(c -> c.decisionContext).orElse(null)).containsIgnoringCase("PENDING");
     }
 
     @Test
@@ -269,8 +269,8 @@ class LedgerIntegrationTest {
 
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
         assertThat(entries).hasSize(4);
-        assertThat(entries.get(3).decisionContext).isNotNull();
-        assertThat(entries.get(3).decisionContext).containsIgnoringCase("COMPLETED");
+        assertThat(entries.get(3).compliance().map(c -> c.decisionContext).orElse(null)).isNotNull();
+        assertThat(entries.get(3).compliance().map(c -> c.decisionContext).orElse(null)).containsIgnoringCase("COMPLETED");
     }
 
     // -------------------------------------------------------------------------
@@ -375,8 +375,9 @@ class LedgerIntegrationTest {
         final WorkItemLedgerEntry completionEntry = entries.stream()
                 .filter(e -> "WorkItemCompleted".equals(e.eventType))
                 .findFirst().orElseThrow();
-        assertThat(completionEntry.rationale).isEqualTo("Income verified against payslips");
-        assertThat(completionEntry.planRef).isEqualTo("credit-policy-v2.1");
+        assertThat(completionEntry.compliance().map(c -> c.rationale).orElse(null))
+                .isEqualTo("Income verified against payslips");
+        assertThat(completionEntry.compliance().map(c -> c.planRef).orElse(null)).isEqualTo("credit-policy-v2.1");
     }
 
     // -------------------------------------------------------------------------
@@ -399,8 +400,9 @@ class LedgerIntegrationTest {
         final WorkItemLedgerEntry rejectionEntry = entries.stream()
                 .filter(e -> "WorkItemRejected".equals(e.eventType))
                 .findFirst().orElseThrow();
-        assertThat(rejectionEntry.rationale).isEqualTo("Context review: satire, not hate speech");
-        assertThat(rejectionEntry.detail).isEqualTo("Content violates guidelines");
+        assertThat(rejectionEntry.compliance().map(c -> c.rationale).orElse(null))
+                .isEqualTo("Context review: satire, not hate speech");
+        assertThat(rejectionEntry.compliance().map(c -> c.detail).orElse(null)).isEqualTo("Content violates guidelines");
     }
 
     // -------------------------------------------------------------------------

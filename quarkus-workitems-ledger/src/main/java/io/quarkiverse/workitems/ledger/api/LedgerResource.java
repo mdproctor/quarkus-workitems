@@ -19,6 +19,7 @@ import jakarta.ws.rs.core.Response;
 
 import io.quarkiverse.ledger.runtime.config.LedgerConfig;
 import io.quarkiverse.ledger.runtime.model.LedgerAttestation;
+import io.quarkiverse.ledger.runtime.model.supplement.ProvenanceSupplement;
 import io.quarkiverse.workitems.ledger.api.dto.LedgerAttestationRequest;
 import io.quarkiverse.workitems.ledger.api.dto.LedgerEntryResponse;
 import io.quarkiverse.workitems.ledger.api.dto.ProvenanceRequest;
@@ -102,15 +103,17 @@ public class LedgerResource {
                     .build();
         }
 
-        if (creationEntry.sourceEntityId != null) {
+        if (creationEntry.provenance().isPresent()) {
             return Response.status(Response.Status.CONFLICT)
                     .entity("{\"error\":\"Provenance already set for this WorkItem\"}")
                     .build();
         }
 
-        creationEntry.sourceEntityId = request.sourceEntityId();
-        creationEntry.sourceEntityType = request.sourceEntityType();
-        creationEntry.sourceEntitySystem = request.sourceEntitySystem();
+        final var provenance = new ProvenanceSupplement();
+        provenance.sourceEntityId = request.sourceEntityId();
+        provenance.sourceEntityType = request.sourceEntityType();
+        provenance.sourceEntitySystem = request.sourceEntitySystem();
+        creationEntry.attach(provenance);
         ledgerRepo.save(creationEntry);
 
         return Response.ok().build();

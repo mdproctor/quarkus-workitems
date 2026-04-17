@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 import io.quarkiverse.ledger.runtime.config.LedgerConfig;
 import io.quarkiverse.ledger.runtime.model.ActorType;
 import io.quarkiverse.ledger.runtime.model.LedgerEntryType;
+import io.quarkiverse.ledger.runtime.model.supplement.ComplianceSupplement;
 import io.quarkiverse.ledger.runtime.service.LedgerHashChain;
 import io.quarkiverse.workitems.ledger.model.WorkItemLedgerEntry;
 import io.quarkiverse.workitems.ledger.repository.WorkItemLedgerEntryRepository;
@@ -76,18 +77,19 @@ public class LedgerEventCapture {
         entry.actorId = event.actor();
         entry.actorType = deriveActorType(event.actor());
         entry.actorRole = deriveActorRole(event.type());
-        entry.rationale = event.rationale();
-        entry.planRef = event.planRef();
-        entry.detail = event.detail();
-        entry.correlationId = null; // future: from OTEL context
         // Set occurredAt explicitly with millis precision before hash computation —
         // @PrePersist sets it too late; DB truncates to millis so canonical form must match
         entry.occurredAt = java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
 
-        // Decision context snapshot
+        // Compliance supplement: rationale, planRef, detail, decisionContext
+        final var compliance = new ComplianceSupplement();
+        compliance.rationale = event.rationale();
+        compliance.planRef = event.planRef();
+        compliance.detail = event.detail();
         if (config.decisionContext().enabled() && workItemOpt.isPresent()) {
-            entry.decisionContext = buildDecisionContext(workItemOpt.get());
+            compliance.decisionContext = buildDecisionContext(workItemOpt.get());
         }
+        entry.attach(compliance);
 
         // Hash chain
         if (config.hashChain().enabled()) {

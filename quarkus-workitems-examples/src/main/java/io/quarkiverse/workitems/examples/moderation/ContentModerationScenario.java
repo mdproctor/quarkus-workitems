@@ -15,6 +15,8 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.ledger.runtime.model.ActorType;
 import io.quarkiverse.ledger.runtime.model.AttestationVerdict;
 import io.quarkiverse.ledger.runtime.model.LedgerAttestation;
+import io.quarkiverse.ledger.runtime.model.supplement.ComplianceSupplement;
+import io.quarkiverse.ledger.runtime.model.supplement.ProvenanceSupplement;
 import io.quarkiverse.workitems.examples.ScenarioResponse;
 import io.quarkiverse.workitems.examples.StepLog;
 import io.quarkiverse.workitems.examples.moderation.MockAIClassifier.ContentFlag;
@@ -118,10 +120,14 @@ public class ContentModerationScenario {
                 .filter(e -> e.sequenceNumber == 1)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No creation ledger entry found"));
-        creationEntry.evidence = flag.toEvidenceJson();
-        creationEntry.sourceEntityId = "POST-9912";
-        creationEntry.sourceEntityType = "ContentFlag";
-        creationEntry.sourceEntitySystem = "content-ai";
+        final var creationCompliance = new ComplianceSupplement();
+        creationCompliance.evidence = flag.toEvidenceJson();
+        creationEntry.attach(creationCompliance);
+        final var creationProvenance = new ProvenanceSupplement();
+        creationProvenance.sourceEntityId = "POST-9912";
+        creationProvenance.sourceEntityType = "ContentFlag";
+        creationProvenance.sourceEntitySystem = "content-ai";
+        creationEntry.attach(creationProvenance);
 
         // Step 2: moderator-dana claims the WorkItem
         final String description2 = "moderator-dana claims the moderation WorkItem";

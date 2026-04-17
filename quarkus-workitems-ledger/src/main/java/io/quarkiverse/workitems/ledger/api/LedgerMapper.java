@@ -3,6 +3,8 @@ package io.quarkiverse.workitems.ledger.api;
 import java.util.List;
 
 import io.quarkiverse.ledger.runtime.model.LedgerAttestation;
+import io.quarkiverse.ledger.runtime.model.supplement.ComplianceSupplement;
+import io.quarkiverse.ledger.runtime.model.supplement.ProvenanceSupplement;
 import io.quarkiverse.workitems.ledger.api.dto.LedgerAttestationResponse;
 import io.quarkiverse.workitems.ledger.api.dto.LedgerEntryResponse;
 import io.quarkiverse.workitems.ledger.model.WorkItemLedgerEntry;
@@ -45,6 +47,17 @@ public final class LedgerMapper {
      */
     public static LedgerEntryResponse toResponse(final WorkItemLedgerEntry e,
             final List<LedgerAttestation> attestations) {
+        // Access supplements directly via the list — avoids JVM method resolution
+        // issues with inherited default methods on Hibernate-proxied subclasses
+        final ComplianceSupplement comp = e.supplements == null ? null
+                : e.supplements.stream()
+                        .filter(s -> s instanceof ComplianceSupplement).map(s -> (ComplianceSupplement) s)
+                        .findFirst().orElse(null);
+        // ObservabilitySupplement not yet in this quarkus-ledger version — causedByEntryId/correlationId return null
+        final ProvenanceSupplement prov = e.supplements == null ? null
+                : e.supplements.stream()
+                        .filter(s -> s instanceof ProvenanceSupplement).map(s -> (ProvenanceSupplement) s)
+                        .findFirst().orElse(null);
         return new LedgerEntryResponse(
                 e.id,
                 e.subjectId,
@@ -55,16 +68,16 @@ public final class LedgerMapper {
                 e.actorId,
                 e.actorType,
                 e.actorRole,
-                e.planRef,
-                e.rationale,
-                e.decisionContext,
-                e.evidence,
-                e.detail,
-                e.causedByEntryId,
-                e.correlationId,
-                e.sourceEntityId,
-                e.sourceEntityType,
-                e.sourceEntitySystem,
+                comp != null ? comp.planRef : null,
+                comp != null ? comp.rationale : null,
+                comp != null ? comp.decisionContext : null,
+                comp != null ? comp.evidence : null,
+                comp != null ? comp.detail : null,
+                null, // causedByEntryId — ObservabilitySupplement not in this quarkus-ledger version
+                null, // correlationId — ObservabilitySupplement not in this quarkus-ledger version
+                prov != null ? prov.sourceEntityId : null,
+                prov != null ? prov.sourceEntityType : null,
+                prov != null ? prov.sourceEntitySystem : null,
                 e.previousHash,
                 e.digest,
                 e.occurredAt,

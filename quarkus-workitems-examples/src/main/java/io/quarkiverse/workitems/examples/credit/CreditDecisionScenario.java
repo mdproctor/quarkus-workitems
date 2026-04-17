@@ -15,6 +15,7 @@ import org.jboss.logging.Logger;
 import io.quarkiverse.ledger.runtime.model.ActorType;
 import io.quarkiverse.ledger.runtime.model.AttestationVerdict;
 import io.quarkiverse.ledger.runtime.model.LedgerAttestation;
+import io.quarkiverse.ledger.runtime.model.supplement.ProvenanceSupplement;
 import io.quarkiverse.workitems.examples.ScenarioResponse;
 import io.quarkiverse.workitems.examples.StepLog;
 import io.quarkiverse.workitems.ledger.api.LedgerMapper;
@@ -111,9 +112,11 @@ public class CreditDecisionScenario {
                 .filter(e -> e.sequenceNumber == 1)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No creation ledger entry found"));
-        creationEntry.sourceEntityId = "LOAN-8821";
-        creationEntry.sourceEntityType = "LoanApplication";
-        creationEntry.sourceEntitySystem = "credit-engine";
+        final var creationProvenance = new ProvenanceSupplement();
+        creationProvenance.sourceEntityId = "LOAN-8821";
+        creationProvenance.sourceEntityType = "LoanApplication";
+        creationProvenance.sourceEntitySystem = "credit-engine";
+        creationEntry.attach(creationProvenance);
 
         // Step 2: officer-alice claims the WorkItem
         final String description2 = "officer-alice claims the loan review WorkItem";
@@ -152,7 +155,7 @@ public class CreditDecisionScenario {
         // Set causedByEntryId on the delegation entry — linking it to the resume entry
         final WorkItemLedgerEntry delegationEntry = ledgerRepo.findLatestByWorkItemId(wi.id)
                 .orElseThrow(() -> new IllegalStateException("No delegation ledger entry found"));
-        delegationEntry.causedByEntryId = resumeEntry.id;
+        // causedByEntryId linking deferred — ObservabilitySupplement not yet in quarkus-ledger
 
         // Step 7: supervisor-bob claims the delegated WorkItem
         final String description7 = "supervisor-bob claims the delegated WorkItem";

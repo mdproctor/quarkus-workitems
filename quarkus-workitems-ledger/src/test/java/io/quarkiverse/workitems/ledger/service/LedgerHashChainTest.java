@@ -43,7 +43,7 @@ class LedgerHashChainTest {
         e.eventType = "WorkItemCreated";
         e.actorId = "system";
         e.actorRole = "Initiator";
-        e.planRef = null;
+        // planRef now in ComplianceSupplement — not needed in hash chain test
         e.occurredAt = Instant.parse("2026-04-14T10:00:00Z");
         return e;
     }
