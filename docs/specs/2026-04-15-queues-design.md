@@ -28,7 +28,7 @@ engine that maintains them, one query per queue view.
 | Label REST endpoints (add, remove, query by label) | `quarkus-workitems` core |
 | `WorkItemFilter` (conditions + actions) | `quarkus-workitems-queues` |
 | `FilterChain` (derivation graph + inverse index) | `quarkus-workitems-queues` |
-| `FilterConditionEvaluator` SPI + built-ins | `quarkus-workitems-queues` |
+| `WorkItemExpressionEvaluator` SPI + `ExpressionDescriptor` + built-ins | `quarkus-workitems-queues` |
 | Filter evaluation engine | `quarkus-workitems-queues` |
 | `QueueView` (named query over a label) | `quarkus-workitems-queues` |
 | Queue REST endpoints | `quarkus-workitems-queues` |
@@ -282,18 +282,25 @@ Filters live in `quarkus-workitems-queues`. They are evaluated by observing
 
 ### Filter Conditions
 
-Filter conditions are evaluated by pluggable `FilterConditionEvaluator`
-implementations. Three built-in evaluators are provided:
+Filter conditions are evaluated by pluggable `WorkItemExpressionEvaluator`
+implementations. Language and expression travel together as an `ExpressionDescriptor`
+record — preventing accidental mismatches between language and expression string.
+Three built-in evaluators are provided:
 
 #### SPI
 
 ```java
-public interface FilterConditionEvaluator {
-    /** Language identifier stored alongside the expression. */
+// ExpressionDescriptor — language and expression travel together
+public record ExpressionDescriptor(String language, String expression) {
+    public static ExpressionDescriptor of(String language, String expression) { ... }
+}
+
+public interface WorkItemExpressionEvaluator {
+    /** Language identifier — e.g. "jexl", "jq", "lambda". */
     String language();
 
-    /** Returns true if the WorkItem matches. */
-    boolean evaluate(WorkItem workItem, String expression);
+    /** Returns true if the WorkItem matches the expression. Never throws. */
+    boolean evaluate(WorkItem workItem, ExpressionDescriptor descriptor);
 }
 ```
 
@@ -356,7 +363,7 @@ They are not stored in the database — they are code.
 
 #### Custom evaluators
 
-Any `@ApplicationScoped` bean implementing `FilterConditionEvaluator` is
+Any `@ApplicationScoped` bean implementing `WorkItemExpressionEvaluator` is
 discovered automatically and available by its `language()` identifier.
 
 ### Filter Condition Fields (JEXL / JQ)
@@ -510,7 +517,7 @@ identical derivation paths.
 
 JEXL (Java-native expressions), JQ (JSON queries), and Lambda (CDI beans)
 cover scripted runtime-editable conditions and compiled type-safe conditions
-respectively. The `FilterConditionEvaluator` SPI allows additional languages.
+respectively. The `WorkItemExpressionEvaluator` SPI allows additional languages.
 Lambda filters are code, not data — not stored in the database.
 
 ### Vocabulary is strict but open-contribution

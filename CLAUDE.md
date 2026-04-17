@@ -78,11 +78,12 @@ quarkus-workitems/
 │       │   ├── WorkItemPriority.java      — enum: LOW|NORMAL|HIGH|CRITICAL
 │       │   └── AuditEntry.java            — PanacheEntity (append-only audit log)
 │       ├── repository/
-│       │   ├── WorkItemRepository.java    — SPI: save, findById, findAll, findInbox, findExpired
-│       │   ├── AuditEntryRepository.java  — SPI: append, findByWorkItemId
+│       │   ├── WorkItemStore.java         — SPI: put, get, scan(WorkItemQuery), scanAll
+│       │   ├── WorkItemQuery.java         — query value object: inbox(), expired(), claimExpired(), byLabelPattern(), all()
+│       │   ├── AuditEntryStore.java       — SPI: append, findByWorkItemId
 │       │   └── jpa/
-│       │       ├── JpaWorkItemRepository.java    — default Panache impl (@ApplicationScoped)
-│       │       └── JpaAuditEntryRepository.java  — default Panache impl (@ApplicationScoped)
+│       │       ├── JpaWorkItemStore.java         — default Panache impl (@ApplicationScoped)
+│       │       └── JpaAuditEntryStore.java        — default Panache impl (@ApplicationScoped)
 │       ├── service/
 │       │   ├── WorkItemService.java       — lifecycle management, expiry, delegation
 │       │   └── EscalationPolicy.java      — SPI interface for escalation strategies
@@ -93,8 +94,8 @@ quarkus-workitems/
 │       └── WorkItemsProcessor.java           — @BuildStep: FeatureBuildItem
 ├── testing/                               — Test utilities module (quarkus-workitems-testing)
 │   └── src/main/java/io/quarkiverse/workitems/testing/
-│       ├── InMemoryWorkItemRepository.java    — ConcurrentHashMap-backed, no datasource needed
-│       └── InMemoryAuditEntryRepository.java  — list-backed
+│       ├── InMemoryWorkItemStore.java         — ConcurrentHashMap-backed, no datasource needed
+│       └── InMemoryAuditEntryStore.java       — list-backed
 ├── docs/
 │   ├── DESIGN.md                          — Implementation-tracking design document
 │   └── specs/
@@ -108,15 +109,15 @@ quarkus-workitems/
 - `quarkus-workitems-queues/` — optional label-based queue module (`WorkItemFilter`, `FilterChain`, `QueueView`, `WorkItemQueueState`)
   - `api/`: `FilterResource` (/filters), `QueueResource` (/queues), `QueueStateResource` (/workitems/{id}/relinquishable)
   - `model/`: `FilterScope`, `FilterAction`, `WorkItemFilter`, `FilterChain`, `QueueView`, `WorkItemQueueState`
-  - `service/`: `FilterConditionEvaluator` SPI, `JexlConditionEvaluator`, `JqConditionEvaluator`, `WorkItemFilterBean`, `FilterEngine`, `FilterEngineImpl`, `FilterEvaluationObserver`
+  - `service/`: `WorkItemExpressionEvaluator` SPI, `ExpressionDescriptor`, `JexlConditionEvaluator`, `JqConditionEvaluator`, `WorkItemFilterBean`, `FilterEngine`, `FilterEngineImpl`, `FilterEvaluationObserver`
 - `quarkus-workitems-examples/` — runnable scenario demos; 4 `@QuarkusTest` scenarios covering every ledger/audit capability, each runs via `POST /examples/{name}/run`
 - `integration-tests/` — `@QuarkusIntegrationTest` suite and native image validation (19 tests, 0.084s native startup)
 
 **Future integration modules (not yet scaffolded):**
 - `workitems-casehub/` — CaseHub `WorkerRegistry` adapter (blocked: CaseHub not yet complete)
 - `workitems-qhorus/` — Qhorus MCP tools (`request_approval`, `check_approval`, `wait_for_approval`) (blocked: Qhorus not yet complete)
-- `workitems-mongodb/` — MongoDB-backed `WorkItemRepository`
-- `workitems-redis/` — Redis-backed `WorkItemRepository`
+- `workitems-mongodb/` — MongoDB-backed `WorkItemStore`
+- `workitems-redis/` — Redis-backed `WorkItemStore`
 
 ---
 

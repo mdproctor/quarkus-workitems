@@ -3,7 +3,7 @@
 
 ## Project Status
 
-All planned phases complete. 267+ tests passing across all modules. 1 open issue (#39, blocked).
+All planned phases complete. 315+ tests passing across all modules. 1 open issue (#39, blocked).
 
 | Module | Tests |
 |---|---|
@@ -18,7 +18,18 @@ All planned phases complete. 267+ tests passing across all modules. 1 open issue
 | testing | 16 |
 | integration-tests | 19 (native) |
 
-## What Was Built (this session)
+## What Was Built (recent sessions)
+
+**WorkItemStore SPI (KV-native storage refactor):**
+- `WorkItemStore` replaces `WorkItemRepository`: `put()`, `get()`, `scan(WorkItemQuery)`
+- `WorkItemQuery` value object with static factories: `inbox()`, `expired()`, `claimExpired()`, `byLabelPattern()`, `all()` — backend-agnostic, aligned with SWF SDK conventions
+- `AuditEntryStore` replaces `AuditEntryRepository`
+- `JpaWorkItemStore`, `InMemoryWorkItemStore`, `JpaAuditEntryStore`, `InMemoryAuditEntryStore`
+- Flyway V2001 (ledger module migration, renamed from V1002 to avoid conflict with quarkus-ledger)
+
+**WorkItemExpressionEvaluator + ExpressionDescriptor:**
+- `FilterConditionEvaluator` → `WorkItemExpressionEvaluator`: aligned with SWF ExpressionFactory naming
+- `ExpressionDescriptor` record bundles language+expression — prevents mismatched pairs
 
 **Labels + vocabulary (sub-epic #51):**
 - `WorkItemLabel` @Embeddable on `WorkItem`: `path`, `persistence` (MANUAL/INFERRED), `appliedBy`
@@ -29,7 +40,7 @@ All planned phases complete. 267+ tests passing across all modules. 1 open issue
 
 **quarkus-workitems-queues (sub-epic #52):**
 - `WorkItemFilter` entity + CRUD REST + ad-hoc eval (`POST /filters/evaluate`)
-- `FilterConditionEvaluator` SPI: JEXL (default), JQ (jackson-jq), Lambda (CDI beans)
+- `WorkItemExpressionEvaluator` SPI + `ExpressionDescriptor` (language+expression bundled): JEXL (default), JQ (jackson-jq), Lambda (CDI beans)
 - `FilterChain`: filterId → Set<workItemId> inverse index for O(affected) cascade
 - `FilterEngineImpl`: strip INFERRED → multi-pass eval (max 10) → propagation → cascade-correct delete
 - `QueueView` + REST: `GET /queues/{id}` evaluates `additionalConditions` JEXL per item + sort

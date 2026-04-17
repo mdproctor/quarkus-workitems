@@ -62,20 +62,20 @@ Any Quarkus application can embed WorkItems to get:
 │  └── EscalationPolicy SPI                                       │
 │         │                                                        │
 │         ▼                                                        │
-│  WorkItemRepository SPI  ←── JpaWorkItemRepository (default)   │
-│  AuditEntryRepository SPI ←── JpaAuditEntryRepository (default) │
+│  WorkItemStore SPI       ←── JpaWorkItemStore (default)        │
+│  AuditEntryStore SPI     ←── JpaAuditEntryStore (default)      │
 │         │                     (Panache, H2/PostgreSQL)          │
 │         │                                                        │
-│         └── InMemoryWorkItemRepository (quarkus-workitems-testing) │
+│         └── InMemoryWorkItemStore (quarkus-workitems-testing)   │
 └─────────────────────────────────────────────────────────────────┘
 
 Optional integration modules (separate artifacts, future):
   quarkus-workitems-flow      →  TaskExecutorFactory SPI (Quarkus-Flow)
   quarkus-workitems-casehub   →  WorkerRegistry adapter (CaseHub)
   quarkus-workitems-qhorus    →  MCP tools (Qhorus)
-  quarkus-workitems-testing   →  InMemoryWorkItemRepository for unit tests
-  quarkus-workitems-mongodb   →  MongoDB-backed repository (future)
-  quarkus-workitems-redis     →  Redis-backed repository (future)
+  quarkus-workitems-testing   →  InMemoryWorkItemStore for unit tests
+  quarkus-workitems-mongodb   →  MongoDB-backed WorkItemStore (future)
+  quarkus-workitems-redis     →  Redis-backed WorkItemStore (future)
 ```
 
 ---
@@ -282,50 +282,44 @@ Consuming app owns datasource config — none in the extension's `application.pr
 
 ## Storage SPI
 
-Persistence is pluggable via two CDI interfaces in `io.quarkiverse.workitems.runtime.repository`:
+Persistence is pluggable via two CDI interfaces in `io.quarkiverse.workitems.runtime.repository`.
+The SPI uses KV-native semantics — aligned with the CNCF Serverless Workflow SDK's persistence
+module conventions — rather than SQL-shaped method-per-query patterns.
 
 ```java
-public interface WorkItemRepository {
-    WorkItem save(WorkItem workItem);
-    Optional<WorkItem> findById(UUID id);
-    List<WorkItem> findAll();
-    /**
-     * Inbox query — returns items where any of the following match (OR):
-     *   - assigneeId equals the given assignee
-     *   - candidateGroups contains any of the given groups
-     *   - candidateUsers contains the given assignee
-     * Additional filters (all nullable = "any"): status, priority, category, followUpBefore.
-     */
-    List<WorkItem> findInbox(String assignee, List<String> candidateGroups,
-                             WorkItemStatus status, WorkItemPriority priority,
-                             String category, Instant followUpBefore);
-    /** Items where expiresAt <= now AND status is PENDING, ASSIGNED, IN_PROGRESS, or SUSPENDED */
-    List<WorkItem> findExpired(Instant now);
-    /** Items where claimDeadline <= now AND status is PENDING */
-    List<WorkItem> findUnclaimedPastDeadline(Instant now);
+public interface WorkItemStore {
+    WorkItem put(WorkItem workItem);          // persist/update
+    Optional<WorkItem> get(UUID id);          // retrieve by PK
+    List<WorkItem> scan(WorkItemQuery query); // query via value object
+    default List<WorkItem> scanAll() { return scan(WorkItemQuery.all()); }
 }
 
-public interface AuditEntryRepository {
+// WorkItemQuery static factories capture common query intent:
+WorkItemQuery.all()                                    // no filter
+WorkItemQuery.inbox(assigneeId, candidateGroups, candidateUserId)  // OR across assignment
+WorkItemQuery.expired(Instant now)                     // expiresAt <= now, active statuses
+WorkItemQuery.claimExpired(Instant now)                // claimDeadline <= now, PENDING
+WorkItemQuery.byLabelPattern("legal/**")               // label wildcard
+
+public interface AuditEntryStore {
     void append(AuditEntry entry);
     List<AuditEntry> findByWorkItemId(UUID workItemId);
 }
 ```
 
 **Default implementations** (`runtime.repository.jpa`):
-- `JpaWorkItemRepository` — Panache-backed; registered `@ApplicationScoped`
-- `JpaAuditEntryRepository` — Panache-backed; registered `@ApplicationScoped`
+- `JpaWorkItemStore` — Panache-backed; `scan(WorkItemQuery)` builds dynamic JPQL; `@ApplicationScoped`
+- `JpaAuditEntryStore` — Panache-backed; `@ApplicationScoped`
 
 **Test implementation** (`quarkus-workitems-testing` module):
-- `InMemoryWorkItemRepository` — `ConcurrentHashMap`-backed; no datasource required
-- `InMemoryAuditEntryRepository` — list-backed
-- Register as `@ApplicationScoped @Alternative @Priority(1)` to override the JPA defaults
+- `InMemoryWorkItemStore` — `ConcurrentHashMap`-backed; `scan()` uses stream-filter; no datasource required
+- `InMemoryAuditEntryStore` — list-backed
+- Both registered `@ApplicationScoped @Alternative @Priority(1)` — override the JPA defaults automatically
 
 **Custom implementations** — any consuming app or module can provide an alternative:
 ```java
-@ApplicationScoped
-@Alternative
-@Priority(1)
-public class MyRedisWorkItemRepository implements WorkItemRepository { ... }
+@ApplicationScoped @Alternative @Priority(1)
+public class MyMongoWorkItemStore implements WorkItemStore { ... }
 ```
 
 The JPA default requires a datasource. When using `quarkus-workitems-testing`, no datasource

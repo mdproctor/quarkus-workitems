@@ -159,7 +159,7 @@ curl -X PUT "http://localhost:8080/workitems/{id}/complete?actor=alice" \
   - **Peer attestations** — any actor (human reviewer, audit agent, automated compliance check) can stamp a formal verdict (`SOUND`, `FLAGGED`, `ENDORSED`, `CHALLENGED`) with a confidence score onto any ledger entry
   - **Causal linking** — `causedByEntryId` links entries to the entry that caused them (e.g. a delegation entry linked back to the preceding resume)
   - **EigenTrust reputation scoring** — a nightly batch computes actor trust scores from ledger history using exponential time-decay weighting; trust scores influence routing suggestions and are queryable via `GET /workitems/actors/{actorId}/trust`
-- **Storage SPI** — `WorkItemRepository` and `AuditEntryRepository` interfaces; default JPA (PostgreSQL/H2) implementations, overridable via `@Alternative @Priority(1)`.
+- **Storage SPI** — `WorkItemStore` and `AuditEntryStore` interfaces with KV-native semantics (`put`, `get`, `scan(WorkItemQuery)`); default JPA (PostgreSQL/H2) implementations, overridable via `@Alternative @Priority(1)`.
 - **Native image support** — validated: GraalVM 25 native image, 0.084s startup, 19 `@QuarkusIntegrationTest` tests.
 
 ---
@@ -184,7 +184,7 @@ All properties are prefixed with `quarkus.workitems`.
 |---|---|
 | `quarkus-workitems` | Core runtime — WorkItem model, JPA storage, REST API, lifecycle engine, CDI events |
 | `quarkus-workitems-deployment` | Build-time processor — feature registration, native image config |
-| `quarkus-workitems-testing` | `InMemoryWorkItemRepository` + `InMemoryAuditEntryRepository` for unit tests without a datasource |
+| `quarkus-workitems-testing` | `InMemoryWorkItemStore` + `InMemoryAuditEntryStore` for unit tests without a datasource |
 | `quarkus-workitems-flow` | Quarkus-Flow integration — `WorkItemsFlow` base class, `WorkItemTaskBuilder` DSL, `HumanTaskFlowBridge`, `WorkItemFlowEventListener` |
 | `quarkus-workitems-ledger` | Optional accountability module — command/event ledger, SHA-256 hash chain, peer attestation, EigenTrust reputation scoring. Zero impact on the core extension when absent. |
 | `quarkus-workitems-queues` | Optional label-based work queues — saved and ad-hoc filters (JEXL, JQ, Lambda CDI), `FilterChain` derivation graph, `QueueView` named label-pattern queries, soft assignment. Zero impact on the core extension when absent. |

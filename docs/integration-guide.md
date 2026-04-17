@@ -286,7 +286,7 @@ The expiry cleanup job (`ExpiryCleanupJob`) runs on the schedule configured by `
 
 ## Section 5: Unit Testing with quarkus-workitems-testing
 
-The `quarkus-workitems-testing` module provides in-memory implementations of `WorkItemRepository` and `AuditEntryRepository`. These override the default JPA implementations via `@Alternative @Priority(1)`, so no datasource or Flyway configuration is needed in tests.
+The `quarkus-workitems-testing` module provides in-memory implementations of `WorkItemStore` and `AuditEntryStore`. These override the default JPA implementations via `@Alternative @Priority(1)`, so no datasource or Flyway configuration is needed in tests.
 
 ### Dependency
 
@@ -309,10 +309,10 @@ class ExpenseApprovalFlowTest {
     WorkItemService service;
 
     @Inject
-    InMemoryWorkItemRepository repo;
+    InMemoryWorkItemStore repo;
 
     @Inject
-    InMemoryAuditEntryRepository auditRepo;
+    InMemoryAuditEntryStore auditRepo;
 
     @BeforeEach
     void setUp() {
@@ -371,16 +371,16 @@ The in-memory repositories can also be used outside of Quarkus CDI for pure unit
 ```java
 class WorkItemServiceUnitTest {
 
-    InMemoryWorkItemRepository workItemRepo = new InMemoryWorkItemRepository();
-    InMemoryAuditEntryRepository auditRepo = new InMemoryAuditEntryRepository();
+    InMemoryWorkItemStore workItemStore = new InMemoryWorkItemStore();
+    InMemoryAuditEntryStore auditStore = new InMemoryAuditEntryStore();
     WorkItemsConfig config = /* mock or test double */;
 
-    WorkItemService service = new WorkItemService(workItemRepo, auditRepo, config);
+    WorkItemService service = new WorkItemService(workItemStore, auditStore, config);
 
     @BeforeEach
     void setUp() {
-        workItemRepo.clear();
-        auditRepo.clear();
+        workItemStore.clear();
+        auditStore.clear();
     }
 
     // tests as above, no Quarkus boot time
@@ -389,13 +389,13 @@ class WorkItemServiceUnitTest {
 
 This approach gives instant test execution — no Quarkus boot, no H2, no Flyway. Use `@QuarkusTest` only when you need CDI wiring or the REST layer.
 
-### InMemoryWorkItemRepository behaviour notes
+### InMemoryWorkItemStore behaviour notes
 
 - Not thread-safe — designed for single-threaded test use only.
-- `save()` assigns a random UUID if `workItem.id` is null.
-- `findInbox()` matches using OR across `assigneeId`, `candidateGroups`, and `candidateUsers`, then applies AND for status, priority, category, and followUp filters — identical semantics to the JPA implementation.
-- `findExpired()` returns items in `PENDING`, `ASSIGNED`, `IN_PROGRESS`, or `SUSPENDED` whose `expiresAt` is in the past.
-- `findUnclaimedPastDeadline()` returns `PENDING` items whose `claimDeadline` is in the past.
+- `put()` assigns a random UUID if `workItem.id` is null.
+- `scan(WorkItemQuery.inbox(...))` matches using OR across `assigneeId`, `candidateGroups`, and `candidateUserId`, then applies AND for status, priority, category, and followUp filters — identical semantics to the JPA implementation.
+- `scan(WorkItemQuery.expired(now))` returns items in `PENDING`, `ASSIGNED`, `IN_PROGRESS`, or `SUSPENDED` whose `expiresAt` is in the past.
+- `scan(WorkItemQuery.claimExpired(now))` returns `PENDING` items whose `claimDeadline` is in the past.
 - Candidate group matching uses exact comma-separated token comparison — `"bob"` does not match `"bobby"`.
 
 ---

@@ -33,7 +33,7 @@ Maven multi-module layout following Quarkiverse conventions:
 | Parent | `quarkus-workitems-parent` | BOM, version management |
 | Runtime | `quarkus-workitems` | Core — WorkItem model, storage SPI, JPA defaults, service, REST API, lifecycle engine, labels, vocabulary |
 | Deployment | `quarkus-workitems-deployment` | Build-time processor — feature registration, native config |
-| Testing | `quarkus-workitems-testing` | `InMemoryWorkItemRepository` — no datasource needed for unit tests |
+| Testing | `quarkus-workitems-testing` | `InMemoryWorkItemStore` + `InMemoryAuditEntryStore` — no datasource needed for unit tests |
 | Flow | `quarkus-workitems-flow` | Quarkus-Flow integration — `WorkItemsFlow` DSL base class, `HumanTaskFlowBridge`, `WorkItemFlowEventListener` |
 | Ledger | `quarkus-workitems-ledger` | Optional accountability module — command/event ledger, SHA-256 hash chain, peer attestation, EigenTrust reputation. Extends `io.quarkiverse.ledger:quarkus-ledger` (shared base library — see ADR-0001). Zero core impact when absent. |
 | Queues | `quarkus-workitems-queues` | Optional label-based work queues — `WorkItemFilter` (JEXL/JQ/Lambda), `FilterChain` derivation graph with cascade delete, `QueueView` named label-pattern queries with `additionalConditions` JEXL filtering, queue pickup (`PUT /workitems/{id}/pickup`), soft assignment (`relinquishable` flag). See ADR-0002. Zero core impact when absent. |
@@ -44,8 +44,8 @@ Maven multi-module layout following Quarkiverse conventions:
 | Integration Tests | `integration-tests` | Black-box `@QuarkusIntegrationTest` suite and native image validation |
 | *(future)* | `quarkus-workitems-casehub` | CaseHub `WorkerRegistry` adapter (blocked: CaseHub not ready) |
 | *(future)* | `quarkus-workitems-qhorus` | Qhorus MCP tools (blocked: Qhorus not ready) |
-| *(future)* | `quarkus-workitems-mongodb` | MongoDB-backed `WorkItemRepository` |
-| *(future)* | `quarkus-workitems-redis` | Redis-backed `WorkItemRepository` |
+| *(future)* | `quarkus-workitems-mongodb` | MongoDB-backed `WorkItemStore` |
+| *(future)* | `quarkus-workitems-redis` | Redis-backed `WorkItemStore` |
 
 ---
 
@@ -151,12 +151,12 @@ Two interfaces in `runtime.repository` allow pluggable persistence:
 
 | Interface | Default impl | Purpose |
 |---|---|---|
-| `WorkItemRepository` | `JpaWorkItemRepository` | save, findById, findAll, findInbox (OR across assignee/groups/users), findExpired, findUnclaimedPastDeadline, findByLabelPattern (exact / `*` / `**` wildcards) |
-| `AuditEntryRepository` | `JpaAuditEntryRepository` | append, findByWorkItemId |
+| `WorkItemStore` | `JpaWorkItemStore` | `put(WorkItem)`, `get(UUID)`, `scan(WorkItemQuery)`, `scanAll()`. `WorkItemQuery` static factories: `inbox()`, `expired()`, `claimExpired()`, `byLabelPattern()`, `all()` — aligned with KV store semantics, backend-agnostic. |
+| `AuditEntryStore` | `JpaAuditEntryStore` | append, findByWorkItemId |
 
 Default JPA implementations are `@ApplicationScoped`. Alternatives (in-memory, MongoDB, Redis)
 override via `@Alternative @Priority(1)`. The `quarkus-workitems-testing` module provides
-`InMemoryWorkItemRepository` + `InMemoryAuditEntryRepository` — no datasource required,
+`InMemoryWorkItemStore` + `InMemoryAuditEntryStore` — no datasource required,
 enabling plain unit tests without `@QuarkusTest`.
 
 ---
@@ -280,7 +280,7 @@ Consuming app owns all datasource config.
 Three tiers:
 
 **Unit tests** (no Quarkus boot):
-- Use `InMemoryWorkItemRepository` from `quarkus-workitems-testing`
+- Use `InMemoryWorkItemStore` from `quarkus-workitems-testing`
 - Pure logic functions (e.g. `QueueBoardBuilder`, `LabelVocabularyService.matchesPattern()`)
 - No datasource, no Flyway, instant execution
 
