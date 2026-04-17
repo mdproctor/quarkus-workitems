@@ -53,6 +53,11 @@ Observes WorkItemLifecycleEvent directly — zero polling delay.</description>
     </dependency>
     <dependency>
       <groupId>dev.tamboui</groupId>
+      <artifactId>tamboui-tui</artifactId>
+      <version>0.2.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-toolkit</artifactId>
       <version>0.2.0-SNAPSHOT</version>
     </dependency>
@@ -79,13 +84,7 @@ Observes WorkItemLifecycleEvent directly — zero polling delay.</description>
       <classifier>test-fixtures</classifier>
       <scope>test</scope>
     </dependency>
-    <!-- tamboui-tui regular JAR: TestBackend is referenced by TuiTestRunner at runtime -->
-    <dependency>
-      <groupId>dev.tamboui</groupId>
-      <artifactId>tamboui-tui</artifactId>
-      <version>0.2.0-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
+    <!-- tamboui-tui compile dep above also provides runtime classes for TuiTestRunner -->
   </dependencies>
 
   <build>
