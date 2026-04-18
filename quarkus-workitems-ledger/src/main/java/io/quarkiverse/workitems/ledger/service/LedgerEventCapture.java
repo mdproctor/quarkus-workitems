@@ -11,8 +11,9 @@ import jakarta.transaction.Transactional;
 import io.quarkiverse.ledger.runtime.config.LedgerConfig;
 import io.quarkiverse.ledger.runtime.model.ActorType;
 import io.quarkiverse.ledger.runtime.model.LedgerEntryType;
+import io.quarkiverse.ledger.runtime.model.LedgerMerkleFrontier;
 import io.quarkiverse.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.quarkiverse.ledger.runtime.service.LedgerHashChain;
+import io.quarkiverse.ledger.runtime.service.LedgerMerkleTree;
 import io.quarkiverse.workitems.ledger.model.WorkItemLedgerEntry;
 import io.quarkiverse.workitems.ledger.repository.WorkItemLedgerEntryRepository;
 import io.quarkiverse.workitems.runtime.event.WorkItemLifecycleEvent;
@@ -63,11 +64,6 @@ public class LedgerEventCapture {
                 .map(e -> e.sequenceNumber + 1)
                 .orElse(1);
 
-        // Retrieve the previous digest for hash chaining
-        final String previousHash = ledgerRepo.findLatestByWorkItemId(event.workItemId())
-                .map(e -> e.digest)
-                .orElse(null);
-
         final WorkItemLedgerEntry entry = new WorkItemLedgerEntry();
         entry.subjectId = event.workItemId();
         entry.sequenceNumber = seq;
@@ -91,13 +87,21 @@ public class LedgerEventCapture {
         }
         entry.attach(compliance);
 
-        // Hash chain
+        // Merkle leaf hash (chain integrity maintained by LedgerMerkleFrontier MMR)
         if (config.hashChain().enabled()) {
-            entry.previousHash = previousHash;
-            entry.digest = LedgerHashChain.compute(previousHash, entry);
+            entry.digest = LedgerMerkleTree.leafHash(entry);
         }
 
         ledgerRepo.save(entry);
+
+        // Update Merkle Mountain Range frontier for this subject
+        if (config.hashChain().enabled()) {
+            final java.util.List<LedgerMerkleFrontier> current = LedgerMerkleFrontier.findBySubjectId(entry.subjectId);
+            final java.util.List<LedgerMerkleFrontier> newFrontier = LedgerMerkleTree.append(entry.digest, current,
+                    entry.subjectId);
+            LedgerMerkleFrontier.delete("subjectId", entry.subjectId);
+            newFrontier.forEach(n -> n.persist());
+        }
     }
 
     /**

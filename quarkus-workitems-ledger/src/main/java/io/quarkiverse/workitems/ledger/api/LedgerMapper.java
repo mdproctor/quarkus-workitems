@@ -78,7 +78,7 @@ public final class LedgerMapper {
                 prov != null ? prov.sourceEntityId : null,
                 prov != null ? prov.sourceEntityType : null,
                 prov != null ? prov.sourceEntitySystem : null,
-                e.previousHash,
+                null, // previousHash removed from LedgerEntry (chain integrity via Merkle frontier)
                 e.digest,
                 e.occurredAt,
                 attestations.stream().map(LedgerMapper::toResponse).toList());

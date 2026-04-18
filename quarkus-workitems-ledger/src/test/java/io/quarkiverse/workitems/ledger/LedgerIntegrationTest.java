@@ -13,7 +13,7 @@ import io.quarkiverse.ledger.runtime.model.ActorType;
 import io.quarkiverse.ledger.runtime.model.AttestationVerdict;
 import io.quarkiverse.ledger.runtime.model.LedgerAttestation;
 import io.quarkiverse.ledger.runtime.model.LedgerEntryType;
-import io.quarkiverse.ledger.runtime.service.LedgerHashChain;
+import io.quarkiverse.ledger.runtime.service.LedgerMerkleTree;
 import io.quarkiverse.workitems.ledger.model.WorkItemLedgerEntry;
 import io.quarkiverse.workitems.ledger.repository.WorkItemLedgerEntryRepository;
 import io.quarkiverse.workitems.runtime.model.WorkItemCreateRequest;
@@ -207,26 +207,28 @@ class LedgerIntegrationTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void hashChain_firstEntryHasNullPreviousHash() {
+    void hashChain_firstEntryHasNonNullDigest() {
         final var item = workItemService.create(basicRequest("Hash test 1"));
 
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
         assertThat(entries).hasSize(1);
-        assertThat(entries.get(0).previousHash).isNull();
+        assertThat(entries.get(0).digest).isNotNull();
     }
 
     @Test
-    void hashChain_secondEntryPreviousHashEqualsFirstDigest() {
+    void hashChain_bothEntriesHaveDistinctDigests() {
         final var item = workItemService.create(basicRequest("Hash test 2"));
         workItemService.claim(item.id, "alice");
 
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
         assertThat(entries).hasSize(2);
-        assertThat(entries.get(1).previousHash).isEqualTo(entries.get(0).digest);
+        assertThat(entries.get(0).digest).isNotNull();
+        assertThat(entries.get(1).digest).isNotNull();
+        assertThat(entries.get(0).digest).isNotEqualTo(entries.get(1).digest);
     }
 
     @Test
-    void hashChain_fullPathChainIsValid() {
+    void hashChain_fullPathDigestsMatchLeafHashes() {
         final var item = workItemService.create(basicRequest("Hash verify test"));
         workItemService.claim(item.id, "alice");
         workItemService.start(item.id, "alice");
@@ -234,7 +236,10 @@ class LedgerIntegrationTest {
 
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
         assertThat(entries).hasSize(4);
-        assertThat(LedgerHashChain.verify(entries)).isTrue();
+        // Each entry's stored digest must equal LedgerMerkleTree.leafHash(entry)
+        final boolean allValid = entries.stream()
+                .allMatch(e -> e.digest != null && e.digest.equals(LedgerMerkleTree.leafHash(e)));
+        assertThat(allValid).isTrue();
     }
 
     @Test
