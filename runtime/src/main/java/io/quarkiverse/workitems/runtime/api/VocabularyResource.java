@@ -26,7 +26,7 @@ public class VocabularyResource {
     @Inject
     LabelVocabularyService vocabularyService;
 
-    public record AddDefinitionRequest(String path, String description, String addedBy) {
+    public record AddDefinitionRequest(String path, String description, String addedBy, String ownerId) {
     }
 
     /**
@@ -70,31 +70,35 @@ public class VocabularyResource {
                     .build();
         }
 
-        // Only GLOBAL vocabulary is currently supported.
-        // ORG/TEAM/PERSONAL require an authentication context and multi-tenant vocabulary creation
-        // which is deferred to a later milestone.
-        if (scope != VocabularyScope.GLOBAL) {
-            return Response.status(501)
-                    .entity(Map.of(
-                            "error", "Only GLOBAL vocabulary is currently supported. " +
-                                    "ORG/TEAM/PERSONAL vocabulary creation requires authentication context " +
-                                    "(deferred milestone)."))
-                    .build();
-        }
-
-        final var globalVocab = vocabularyService.findGlobalVocabulary();
-        if (globalVocab == null) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("error", "GLOBAL vocabulary not found — check Flyway V3 migration"))
-                    .build();
+        final io.quarkiverse.workitems.runtime.model.LabelVocabulary vocab;
+        if (scope == VocabularyScope.GLOBAL) {
+            vocab = vocabularyService.findGlobalVocabulary();
+            if (vocab == null) {
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(Map.of("error", "GLOBAL vocabulary not found — check Flyway V3 migration"))
+                        .build();
+            }
+        } else {
+            // ORG/TEAM require an explicit ownerId; PERSONAL defaults to addedBy
+            String ownerId = request.ownerId();
+            if ((ownerId == null || ownerId.isBlank()) && scope == VocabularyScope.PERSONAL) {
+                ownerId = request.addedBy();
+            }
+            if (ownerId == null || ownerId.isBlank()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "ownerId is required for " + scope + " scope"))
+                        .build();
+            }
+            final String vocabName = scope.name().toLowerCase() + ":" + ownerId;
+            vocab = vocabularyService.findOrCreateVocabulary(scope, ownerId, vocabName);
         }
 
         final LabelDefinition def = vocabularyService.addDefinition(
-                globalVocab.id, request.path(), request.description(),
+                vocab.id, request.path(), request.description(),
                 request.addedBy() != null ? request.addedBy() : "unknown");
 
         return Response.status(Response.Status.CREATED)
-                .entity(Map.of("id", def.id, "path", def.path, "scope", VocabularyScope.GLOBAL))
+                .entity(Map.of("id", def.id, "path", def.path, "scope", scope))
                 .build();
     }
 }

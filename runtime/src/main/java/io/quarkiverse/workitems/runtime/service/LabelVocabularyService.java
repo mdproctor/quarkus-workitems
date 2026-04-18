@@ -94,4 +94,25 @@ public class LabelVocabularyService {
         return LabelVocabulary.<LabelVocabulary> find("scope", VocabularyScope.GLOBAL)
                 .firstResult();
     }
+
+    /**
+     * Find an existing vocabulary at the given scope and ownerId, or create one.
+     * GLOBAL scope: use {@link #findGlobalVocabulary()} instead.
+     */
+    @Transactional
+    public LabelVocabulary findOrCreateVocabulary(final VocabularyScope scope, final String ownerId,
+            final String name) {
+        LabelVocabulary existing = LabelVocabulary
+                .<LabelVocabulary> find("scope = ?1 and ownerId = ?2", scope, ownerId)
+                .firstResult();
+        if (existing != null) {
+            return existing;
+        }
+        final LabelVocabulary vocab = new LabelVocabulary();
+        vocab.scope = scope;
+        vocab.ownerId = ownerId;
+        vocab.name = name;
+        vocab.persist();
+        return vocab;
+    }
 }

@@ -128,13 +128,90 @@ class LabelEndpointTest {
     }
 
     @Test
-    void vocabulary_addDefinition_nonGlobalScope_returns501() {
+    void vocabulary_addDefinition_personal_defaultsOwnerToAddedBy() {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"path\": \"my/personal/label\", \"addedBy\": \"alice\"}")
                 .post("/vocabulary/PERSONAL")
                 .then()
-                .statusCode(501);
+                .statusCode(201)
+                .body("path", equalTo("my/personal/label"))
+                .body("scope", equalTo("PERSONAL"));
+    }
+
+    @Test
+    void vocabulary_addDefinition_org_withOwnerId_succeeds() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"path\": \"org/finance/approvals\", \"addedBy\": \"alice\", \"ownerId\": \"acme-corp\"}")
+                .post("/vocabulary/ORG")
+                .then()
+                .statusCode(201)
+                .body("path", equalTo("org/finance/approvals"))
+                .body("scope", equalTo("ORG"));
+    }
+
+    @Test
+    void vocabulary_addDefinition_team_withOwnerId_succeeds() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"path\": \"team/sprint/review\", \"addedBy\": \"bob\", \"ownerId\": \"team-alpha\"}")
+                .post("/vocabulary/TEAM")
+                .then()
+                .statusCode(201)
+                .body("path", equalTo("team/sprint/review"))
+                .body("scope", equalTo("TEAM"));
+    }
+
+    @Test
+    void vocabulary_addDefinition_org_missingOwnerId_returns400() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"path\": \"org/some/label\", \"addedBy\": \"alice\"}")
+                .post("/vocabulary/ORG")
+                .then()
+                .statusCode(400)
+                .body("error", org.hamcrest.Matchers.containsString("ownerId"));
+    }
+
+    @Test
+    void vocabulary_addDefinition_scopedTerm_appearsInListAll() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"path\": \"my/team/label\", \"addedBy\": \"charlie\", \"ownerId\": \"team-bravo\"}")
+                .post("/vocabulary/TEAM")
+                .then()
+                .statusCode(201);
+
+        given()
+                .get("/vocabulary")
+                .then()
+                .statusCode(200)
+                .body("path", org.hamcrest.Matchers.hasItem("my/team/label"));
+    }
+
+    @Test
+    void vocabulary_addDefinition_sameOwner_reuseVocabulary() {
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"path\": \"personal/label/one\", \"addedBy\": \"dave\"}")
+                .post("/vocabulary/PERSONAL")
+                .then()
+                .statusCode(201);
+
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"path\": \"personal/label/two\", \"addedBy\": \"dave\"}")
+                .post("/vocabulary/PERSONAL")
+                .then()
+                .statusCode(201);
+
+        given()
+                .get("/vocabulary")
+                .then()
+                .statusCode(200)
+                .body("path", org.hamcrest.Matchers.hasItem("personal/label/one"))
+                .body("path", org.hamcrest.Matchers.hasItem("personal/label/two"));
     }
 
     @Test
