@@ -1,5 +1,5 @@
 # Quarkus WorkItems — Session Handover
-**Date:** 2026-04-17
+**Date:** 2026-04-18
 
 ## Project Status
 
@@ -22,52 +22,36 @@ All planned phases complete. 321+ tests passing across all modules. 1 open issue
 
 **WorkItemStore SPI (KV-native storage refactor):**
 - `WorkItemStore` replaces `WorkItemRepository`: `put()`, `get()`, `scan(WorkItemQuery)`
-- `WorkItemQuery` value object with static factories: `inbox()`, `expired()`, `claimExpired()`, `byLabelPattern()`, `all()` — backend-agnostic, aligned with SWF SDK conventions
+- `WorkItemQuery` value object with static factories: `inbox()`, `expired()`, `claimExpired()`, `byLabelPattern()`, `all()`
 - `AuditEntryStore` replaces `AuditEntryRepository`
 - `JpaWorkItemStore`, `InMemoryWorkItemStore`, `JpaAuditEntryStore`, `InMemoryAuditEntryStore`
-- Flyway V2001 (ledger module migration, renamed from V1002 to avoid conflict with quarkus-ledger)
+- Flyway V2001 (ledger module, renamed from V1002 to avoid conflict with quarkus-ledger)
 
-**WorkItemExpressionEvaluator + ExpressionDescriptor:**
-- `FilterConditionEvaluator` → `WorkItemExpressionEvaluator`: aligned with SWF ExpressionFactory naming
+**WorkItemExpressionEvaluator + ExpressionDescriptor (SWF-aligned):**
+- `FilterConditionEvaluator` → `WorkItemExpressionEvaluator`
 - `ExpressionDescriptor` record bundles language+expression — prevents mismatched pairs
 
-**Labels + vocabulary (sub-epic #51):**
-- `WorkItemLabel` @Embeddable on `WorkItem`: `path`, `persistence` (MANUAL/INFERRED), `appliedBy`
-- `LabelVocabulary` + `LabelDefinition` (Panache entities, Flyway V2+V3)
-- Vocabulary scopes: GLOBAL → ORG → TEAM → PERSONAL; seeded GLOBAL vocab with 7 common labels
-- `findByLabelPattern()` in repo SPI: exact, `/*`, `/**` wildcard semantics
-- REST: `GET /workitems?label=pattern`, `POST/DELETE /workitems/{id}/labels`, `GET/POST /vocabulary/{scope}`
+**quarkus-ledger supplement API adaptation:**
+- `LedgerEntry` fields moved to `ComplianceSupplement`, `ProvenanceSupplement` via `attach()`
+- `ObservabilitySupplement` absent from published JAR — causedByEntryId/correlationId return null
 
-**quarkus-workitems-queues (sub-epic #52):**
-- `WorkItemFilter` entity + CRUD REST + ad-hoc eval (`POST /filters/evaluate`)
-- `WorkItemExpressionEvaluator` SPI + `ExpressionDescriptor` (language+expression bundled): JEXL (default), JQ (jackson-jq), Lambda (CDI beans)
-- `FilterChain`: filterId → Set<workItemId> inverse index for O(affected) cascade
-- `FilterEngineImpl`: strip INFERRED → multi-pass eval (max 10) → propagation → cascade-correct delete
-- `QueueView` + REST: `GET /queues/{id}` evaluates `additionalConditions` JEXL per item + sort
-- `PUT /workitems/{id}/pickup`: queue pickup — PENDING (standard claim) or ASSIGNED+relinquishable (soft takeover, clears flag)
-- `PUT /workitems/{id}/relinquishable`: signal willingness to release
+**Tamboui Pilot tests enabled:**
+- All 6 `QueueDashboardTest` Pilot tests passing headlessly
+- `TestBackend` is in `tamboui-core:test-fixtures` (not `tamboui-tui:test-fixtures`)
+- Feedback raised with Max Anderston (Tamboui author) re: placement/transitivity
 
-**quarkus-workitems-queues-examples:**
-- 5 runnable scenarios: support triage cascade, legal routing, finance approval, security escalation, document review pipeline (step-by-step with `POST /queue-examples/review/step`)
-
-**quarkus-workitems-queues-dashboard:**
-- Tamboui TUI inside Quarkus via `@QuarkusMain`; `@ObservesAsync WorkItemLifecycleEvent` — zero polling delay
-- `QueueBoardBuilder` (pure logic, 10 unit tests), `ReviewStepService` (CDI step machine, 4 @QuarkusTest)
-- Pilot end-to-end tests: 6 tests passing via `TuiTestRunner` + `Pilot` (headless, no real terminal). `TestBackend` is in `tamboui-core:test-fixtures` — not `tamboui-tui:test-fixtures` as expected. Feedback raised with Max Anderston (Tamboui author) to either move `TestBackend` or declare the API dependency transitively.
+**Labels + vocabulary (sub-epic #51), queues module (sub-epic #52), dashboard, examples:**
+- *Unchanged — `git show HEAD~10:HANDOFF.md`*
 
 ## Immediate Next Step
 
-**Dashboard verification** — run in a real terminal to confirm items move between columns:
-```bash
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -pl quarkus-workitems-queues-dashboard
-```
-Press `s` to step, `q` to quit.
+**MongoDB backend** (`quarkus-workitems-persistence-mongodb`) — `WorkItemStore` + `WorkItemQuery` are now backend-agnostic; this is the first real test of the SPI redesign.
 
 ## Open Issues
 
 - #39 — ProvenanceLink PROV-O graph (blocked: CaseHub and Qhorus not ready)
 
-## Remaining Deferred (queues module)
+## Remaining Deferred
 
 - Non-GLOBAL vocabulary scopes — `POST /vocabulary/ORG|TEAM|PERSONAL` returns 501 (needs auth context)
 
@@ -75,8 +59,8 @@ Press `s` to step, `q` to quit.
 
 | What | Path |
 |---|---|
-| Queues design spec | `docs/specs/2026-04-15-queues-design.md` |
-| Queues ADR | `adr/0002-labels-as-queues-with-inferred-persistence.md` |
 | API reference | `docs/api-reference.md` |
 | Design tracker | `docs/DESIGN.md` |
-| Ledger design | `docs/specs/ledger-design.md` |
+| Queues design spec | `docs/specs/2026-04-15-queues-design.md` |
+| Queues ADR | `adr/0002-labels-as-queues-with-inferred-persistence.md` |
+| Blog (this session) | `blog/2026-04-18-mdp01-aligning-with-the-sdk.md` |
