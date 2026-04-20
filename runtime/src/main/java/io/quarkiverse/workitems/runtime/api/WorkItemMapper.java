@@ -22,7 +22,8 @@ public final class WorkItemMapper {
                 wi.claimDeadline, wi.expiresAt, wi.followUpDate,
                 wi.createdAt, wi.updatedAt, wi.assignedAt, wi.startedAt,
                 wi.completedAt, wi.suspendedAt,
-                wi.labels == null ? List.of() : wi.labels.stream().map(WorkItemMapper::toLabelResponse).toList());
+                wi.labels == null ? List.of() : wi.labels.stream().map(WorkItemMapper::toLabelResponse).toList(),
+                wi.version);
     }
 
     public static AuditEntryResponse toAuditResponse(final AuditEntry e) {
@@ -44,7 +45,7 @@ public final class WorkItemMapper {
                 wi.claimDeadline, wi.expiresAt, wi.followUpDate,
                 wi.createdAt, wi.updatedAt, wi.assignedAt, wi.startedAt,
                 wi.completedAt, wi.suspendedAt,
-                labelResponses, auditResponses);
+                labelResponses, auditResponses, wi.version);
     }
 
     public static WorkItemCreateRequest toServiceRequest(final CreateWorkItemRequest req) {

@@ -36,5 +36,11 @@ public record WorkItemResponse(
         Instant startedAt,
         Instant completedAt,
         Instant suspendedAt,
-        List<WorkItemLabelResponse> labels) {
+        List<WorkItemLabelResponse> labels,
+        /**
+         * JPA optimistic locking version. Included in the response so clients can detect
+         * concurrent modifications — if the version you received differs from what another
+         * client received, a modification occurred between your reads.
+         */
+        Long version) {
 }

@@ -37,5 +37,6 @@ public record WorkItemWithAuditResponse(
         Instant completedAt,
         Instant suspendedAt,
         List<WorkItemLabelResponse> labels,
-        List<AuditEntryResponse> auditTrail) {
+        List<AuditEntryResponse> auditTrail,
+        Long version) {
 }
