@@ -141,6 +141,12 @@
       <artifactId>quarkus-smallrye-health-deployment</artifactId>
     </dependency>
 
+    <!-- OpenAPI -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-openapi-deployment</artifactId>
+    </dependency>
+
     <!-- Testing -->
     <dependency>
       <groupId>io.quarkus</groupId>

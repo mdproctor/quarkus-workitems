@@ -36,6 +36,7 @@ import io.quarkiverse.workitems.runtime.repository.AuditEntryStore;
 import io.quarkiverse.workitems.runtime.repository.WorkItemNoteStore;
 import io.quarkiverse.workitems.runtime.repository.WorkItemQuery;
 import io.quarkiverse.workitems.runtime.repository.WorkItemStore;
+import io.quarkiverse.workitems.runtime.service.InboxSummaryBuilder;
 import io.quarkiverse.workitems.runtime.service.LabelNotFoundException;
 import io.quarkiverse.workitems.runtime.service.WorkItemNotFoundException;
 import io.quarkiverse.workitems.runtime.service.WorkItemService;
@@ -85,6 +86,35 @@ public class WorkItemResource {
                     .map(WorkItemMapper::toResponse).toList();
         }
         return workItemStore.scan(WorkItemQuery.all()).stream().map(WorkItemMapper::toResponse).toList();
+    }
+
+    /**
+     * Aggregate counts for dashboard widgets — one fast call, no payload loading.
+     *
+     * <p>
+     * Supports the same filter parameters as {@code GET /inbox} (assignee,
+     * candidateGroup, category, priority, status). All parameters are optional;
+     * omitting them returns counts across all WorkItems.
+     */
+    @GET
+    @Path("/inbox/summary")
+    public InboxSummaryBuilder.InboxSummary inboxSummary(
+            @QueryParam("assignee") final String assignee,
+            @QueryParam("candidateGroup") final List<String> candidateGroups,
+            @QueryParam("candidateUser") final String candidateUser,
+            @QueryParam("status") final WorkItemStatus status,
+            @QueryParam("priority") final WorkItemPriority priority,
+            @QueryParam("category") final String category) {
+
+        final WorkItemQuery.Builder qb = WorkItemQuery.inbox(assignee, candidateGroups, candidateUser).toBuilder();
+        if (status != null)
+            qb.status(status);
+        if (priority != null)
+            qb.priority(priority);
+        if (category != null)
+            qb.category(category);
+
+        return InboxSummaryBuilder.build(workItemStore.scan(qb.build()), Instant.now());
     }
 
     @GET
@@ -232,6 +262,39 @@ public class WorkItemResource {
         } catch (LabelNotFoundException e) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(Map.of("error", e.getMessage())).build();
+        }
+    }
+
+    /** Request body for cloning a WorkItem. */
+    public record CloneRequest(String title, String createdBy) {
+    }
+
+    /**
+     * Clone a WorkItem — creates a new PENDING WorkItem copying operational fields.
+     *
+     * <p>
+     * Title defaults to "{original title} (copy)" if not overridden.
+     * MANUAL labels are copied; INFERRED labels are not (the filter engine re-applies on the first event).
+     * Assignee, owner, delegation state, and resolution are never copied.
+     *
+     * @param id the source WorkItem UUID
+     * @param request optional title override and required createdBy
+     * @return 201 Created with the new WorkItem, 404 if source not found
+     */
+    @POST
+    @Path("/{id}/clone")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional
+    public Response clone(@PathParam("id") final UUID id, final CloneRequest request) {
+        try {
+            final String createdBy = (request != null && request.createdBy() != null)
+                    ? request.createdBy()
+                    : "unknown";
+            final String title = (request != null) ? request.title() : null;
+            final WorkItem clone = workItemService.clone(id, title, createdBy);
+            return Response.status(Response.Status.CREATED).entity(WorkItemMapper.toResponse(clone)).build();
+        } catch (WorkItemNotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(Map.of("error", e.getMessage())).build();
         }
     }
 

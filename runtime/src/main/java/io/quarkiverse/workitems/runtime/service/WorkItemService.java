@@ -327,6 +327,54 @@ public class WorkItemService {
         return saved;
     }
 
+    /**
+     * Clone a WorkItem — creates a new PENDING WorkItem copying operational fields from the source.
+     *
+     * <p>
+     * <strong>Copied:</strong> title (optionally overridden), description, category, formKey, priority,
+     * candidateGroups, candidateUsers, requiredCapabilities, payload, MANUAL labels.
+     *
+     * <p>
+     * <strong>Not copied:</strong> id, status (always PENDING), assigneeId, owner, delegationState,
+     * delegationChain, priorStatus, resolution, all timestamps, INFERRED labels (the filter engine
+     * re-applies them on the first lifecycle event).
+     *
+     * @param sourceId the WorkItem to clone
+     * @param titleOverride if non-null and non-blank, used as the clone's title; otherwise appends " (copy)"
+     * @param createdBy the actor creating the clone
+     * @return the newly created PENDING WorkItem
+     * @throws WorkItemNotFoundException if the source WorkItem does not exist
+     */
+    @Transactional
+    public WorkItem clone(final UUID sourceId, final String titleOverride, final String createdBy) {
+        final WorkItem source = workItemStore.get(sourceId)
+                .orElseThrow(() -> new WorkItemNotFoundException(sourceId));
+
+        final String title = (titleOverride != null && !titleOverride.isBlank())
+                ? titleOverride
+                : source.title + " (copy)";
+
+        final java.util.List<WorkItemLabel> manualLabels = source.labels == null
+                ? java.util.List.of()
+                : source.labels.stream()
+                        .filter(l -> l.persistence == LabelPersistence.MANUAL)
+                        .toList();
+
+        final WorkItemCreateRequest req = new WorkItemCreateRequest(
+                title, source.description, source.category, source.formKey,
+                source.priority, null, source.candidateGroups, source.candidateUsers,
+                source.requiredCapabilities, createdBy, source.payload,
+                null, null, null, null);
+
+        WorkItem clone = create(req);
+
+        for (final WorkItemLabel label : manualLabels) {
+            clone = addLabel(clone.id, label.path, label.appliedBy);
+        }
+
+        return clone;
+    }
+
     private WorkItem requireWorkItem(final UUID id) {
         return workItemStore.get(id)
                 .orElseThrow(() -> new WorkItemNotFoundException(id));

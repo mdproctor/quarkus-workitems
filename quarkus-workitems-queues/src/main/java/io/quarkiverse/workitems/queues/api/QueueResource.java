@@ -16,14 +16,19 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import org.jboss.resteasy.reactive.RestStreamElementType;
+
+import io.quarkiverse.workitems.queues.event.WorkItemQueueEvent;
 import io.quarkiverse.workitems.queues.model.FilterScope;
 import io.quarkiverse.workitems.queues.model.QueueView;
 import io.quarkiverse.workitems.queues.service.ExpressionDescriptor;
 import io.quarkiverse.workitems.queues.service.FilterEvaluatorRegistry;
+import io.quarkiverse.workitems.queues.service.WorkItemQueueEventBroadcaster;
 import io.quarkiverse.workitems.runtime.api.WorkItemMapper;
 import io.quarkiverse.workitems.runtime.api.WorkItemResponse;
 import io.quarkiverse.workitems.runtime.repository.WorkItemQuery;
 import io.quarkiverse.workitems.runtime.repository.WorkItemStore;
+import io.smallrye.mutiny.Multi;
 
 /** REST resource for managing queue views and querying their live content. */
 @Path("/queues")
@@ -33,6 +38,9 @@ public class QueueResource {
 
     @Inject
     WorkItemStore workItemStore;
+
+    @Inject
+    WorkItemQueueEventBroadcaster queueEventBroadcaster;
 
     @Inject
     FilterEvaluatorRegistry evaluatorRegistry;
@@ -157,5 +165,24 @@ public class QueueResource {
         }
         q.delete();
         return Response.noContent().build();
+    }
+
+    /**
+     * Server-Sent Events stream of {@link WorkItemQueueEvent} (ADDED/REMOVED/CHANGED)
+     * scoped to a specific queue view.
+     *
+     * <p>
+     * Hot stream — only events after the client connects are delivered.
+     * Use {@code GET /queues/{id}/workitems} to fetch the current queue contents.
+     *
+     * @param queueViewId the queue view UUID
+     * @return SSE stream of queue membership events for this queue
+     */
+    @GET
+    @Path("/{id}/events")
+    @Produces(MediaType.SERVER_SENT_EVENTS)
+    @RestStreamElementType(MediaType.APPLICATION_JSON)
+    public Multi<WorkItemQueueEvent> streamQueueEvents(@PathParam("id") final UUID queueViewId) {
+        return queueEventBroadcaster.stream(queueViewId);
     }
 }
