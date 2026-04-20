@@ -164,6 +164,16 @@ Audit event values (aligned with quarkus-flow task event naming):
 
 ## Storage SPI
 
+**`AuditQuery` (`runtime.repository/`)** — value object for cross-WorkItem audit searches (Issue #109):
+
+| Field | Default | Notes |
+|---|---|---|
+| `actorId` | null | Exact match on actor |
+| `from` / `to` | null | Inclusive date range on occurredAt |
+| `event` | null | Exact match on event type |
+| `category` | null | Filters via subquery on WorkItem.category |
+| `page` / `size` | 0 / 20 | Offset pagination; size capped at 100 |
+
 Two interfaces in `runtime.repository` allow pluggable persistence:
 
 | Interface | Default impl | Purpose |
@@ -263,6 +273,26 @@ between the core and the ledger module. If the module is absent, events fire int
 | `GET /workitem-form-schemas/{id}` | Get single schema; 404 if not found |
 | `DELETE /workitem-form-schemas/{id}` | Delete schema; 204/404; independent of WorkItem lifecycle |
 
+`AuditResource` at `/audit` (core, Epic #99, Issue #109):
+
+| Endpoint | Notes |
+|---|---|
+| `GET /audit` | Paginated cross-WorkItem audit history; all params optional |
+| `GET /audit?actorId=X` | Exact match on actor field |
+| `GET /audit?event=COMPLETED` | Filter by event type |
+| `GET /audit?from=ISO8601&to=ISO8601` | Date range on occurredAt |
+| `GET /audit?category=finance` | WorkItems in that category (subquery) |
+| `GET /audit?page=N&size=M` | Offset pagination; size capped at 100; default page=0, size=20 |
+
+Response envelope: `{entries: [...], page, size, total}`. Each entry includes `id`, `workItemId`, `event`, `actor`, `detail`, `occurredAt`.
+
+`ReportResource` at `/workitems/reports` (core, Epic #99, Issues #110–111):
+
+| Endpoint | Notes |
+|---|---|
+| `GET /workitems/reports/sla-breaches?from=&to=&category=&priority=` | WorkItems that missed `expiresAt`; returns `items[]` + `summary{totalBreached,avgBreachDurationMinutes,byCategory}` |
+| `GET /workitems/reports/actors/{actorId}?from=&to=&category=` | Actor performance: `totalAssigned`, `totalCompleted`, `totalRejected`, `avgCompletionMinutes` (null if no completions), `byCategory` map |
+
 `quarkus-workitems-queues` adds `/filters`, `/queues`, `/workitems/{id}/pickup`, and `/workitems/{id}/relinquishable`. See `docs/api-reference.md` for full queue API documentation.
 
 ---
@@ -298,6 +328,7 @@ Consuming app owns all datasource config.
 | **Examples** | ✅ Complete | `quarkus-workitems-examples` (4 ledger scenarios) + `quarkus-workitems-flow-examples` (WorkItemsFlow DSL showcase) + `quarkus-workitems-queues-examples` (5 queue scenarios: triage cascade, legal routing, finance approval, security escalation, document review pipeline) |
 | **Dashboard** | ✅ Complete | `quarkus-workitems-queues-dashboard` — Tamboui TUI inside Quarkus via `@QuarkusMain`; live queue board, step-by-step scenario control, 6 Pilot end-to-end tests passing headlessly via `TuiTestRunner` (`TestBackend` is in `tamboui-core:test-fixtures`) |
 | **9 — Form Schema** | ✅ Complete | Epic #98: `WorkItemFormSchema` entity + CRUD API (#107 ✅), payload/resolution validation (#108 ✅). UI devs can GET the schema for a category and auto-generate validated forms. |
+| **10 — Audit History Query API** | ✅ Complete | Epic #99: `GET /audit` cross-WorkItem query with actorId/event/date/category filters + pagination (#109 ✅), SLA breach report (#110 ✅), actor performance summary (#111 ✅). V12 indexes. |
 | **10 — CaseHub integration** | ⏸ Blocked | `quarkus-workitems-casehub` — CaseHub WorkerRegistry adapter (awaiting CaseHub stable API) |
 | **10 — Qhorus integration** | ⏸ Blocked | `quarkus-workitems-qhorus` — MCP tools (awaiting Qhorus stable API) |
 | **11 — ProvenanceLink** | ⏸ Blocked | Typed PROV-O causal graph — awaiting CaseHub + Qhorus integrations (issue #39) |
@@ -328,7 +359,7 @@ Three tiers:
 
 | Module | Tests |
 |---|---|
-| runtime | 446 |
+| runtime | 497 |
 | workitems-flow | 32 |
 | quarkus-workitems-ledger | 75 |
 | quarkus-workitems-queues | 82 |
