@@ -203,7 +203,7 @@ JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home
 | #77 | WorkItem Collaboration & Productivity | ✅ complete | — |
 | #78 | Queue Intelligence & Real-time Observability | ✅ complete | — |
 | #79 | External System Integrations | blocked | CaseHub/Qhorus not stable |
-| #80 | Storage Backend Flexibility | active | Redis backend |
+| #80 | Storage Backend Flexibility | ✅ closed | Redis dropped — SPI proven; Redis role is distributed infrastructure |
 | #81 | Platform Foundation & Correctness | ✅ complete | — |
 | #39 | ProvenanceLink (PROV-O causal graph) | blocked | Awaiting #79 integrations |
 
