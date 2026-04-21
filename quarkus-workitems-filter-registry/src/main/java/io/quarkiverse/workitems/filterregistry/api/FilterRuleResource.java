@@ -15,6 +15,7 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -30,8 +31,8 @@ import io.quarkiverse.workitems.filterregistry.spi.FilterDefinition;
  * GET    /filter-rules                          — list all dynamic rules
  * GET    /filter-rules/{id}                     — get single dynamic rule; 404 if not found
  * DELETE /filter-rules/{id}                     — delete dynamic rule; 204/404
- * GET    /filter-rules/permanent                — list all permanent (CDI-produced) rules
- * PUT    /filter-rules/permanent/{name}/enabled — toggle permanent rule at runtime
+ * GET    /filter-rules/permanent                    — list all permanent (CDI-produced) rules
+ * PUT    /filter-rules/permanent/enabled?name=... — toggle permanent rule at runtime
  * </pre>
  */
 @Path("/filter-rules")
@@ -133,15 +134,20 @@ public class FilterRuleResource {
     /**
      * Toggles the enabled state of a permanent filter rule at runtime.
      * The override is held in-memory and resets on restart.
+     * The filter name is passed as a query parameter to avoid slash-encoding issues with
+     * namespaced names like {@code test/apply-label}.
      *
-     * @param name the filter name
+     * @param name the filter name (query param)
      * @param body map containing {@code enabled} boolean
-     * @return 200 with updated state, 400 if enabled missing, 404 if not found
+     * @return 200 with updated state, 400 if enabled or name missing, 404 if not found
      */
     @PUT
-    @Path("/permanent/{name}/enabled")
-    public Response togglePermanent(@PathParam("name") final String name,
+    @Path("/permanent/enabled")
+    public Response togglePermanent(@QueryParam("name") final String name,
             final Map<String, Boolean> body) {
+        if (name == null || name.isBlank()) {
+            return Response.status(400).entity(Map.of("error", "name query parameter required")).build();
+        }
         final Boolean enabled = body != null ? body.get("enabled") : null;
         if (enabled == null) {
             return Response.status(400).entity(Map.of("error", "enabled required")).build();
