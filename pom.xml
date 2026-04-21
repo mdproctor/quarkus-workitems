@@ -21,6 +21,7 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
   <url>https://github.com/mdproctor/quarkus-workitems</url>
 
   <modules>
+    <module>quarkus-workitems-api</module>
     <module>runtime</module>
     <module>deployment</module>
     <module>testing</module>
