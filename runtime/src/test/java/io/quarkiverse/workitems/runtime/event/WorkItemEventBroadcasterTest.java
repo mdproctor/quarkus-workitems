@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.workitems.runtime.model.WorkItem;
 import io.quarkiverse.workitems.runtime.model.WorkItemStatus;
 
 /**
@@ -190,6 +191,9 @@ class WorkItemEventBroadcasterTest {
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private WorkItemLifecycleEvent event(final String name, final UUID workItemId) {
-        return WorkItemLifecycleEvent.of(name, workItemId, WorkItemStatus.PENDING, "test", null);
+        final WorkItem wi = new WorkItem();
+        wi.id = workItemId;
+        wi.status = WorkItemStatus.PENDING;
+        return WorkItemLifecycleEvent.of(name, wi, "test", null);
     }
 }

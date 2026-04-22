@@ -297,7 +297,7 @@ class WorkItemEventTest {
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         assertThat(events).hasSize(1);
-        assertThat(events.get(0).source()).isEqualTo("/workitems/" + wi.id);
+        assertThat(events.get(0).sourceUri()).isEqualTo("/workitems/" + wi.id);
     }
 
     @Test

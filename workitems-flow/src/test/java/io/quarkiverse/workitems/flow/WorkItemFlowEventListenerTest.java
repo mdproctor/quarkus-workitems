@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -13,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkiverse.workitems.runtime.event.WorkItemLifecycleEvent;
+import io.quarkiverse.workitems.runtime.model.WorkItem;
 import io.quarkiverse.workitems.runtime.model.WorkItemStatus;
 
 class WorkItemFlowEventListenerTest {
@@ -35,9 +35,13 @@ class WorkItemFlowEventListenerTest {
     }
 
     private WorkItemLifecycleEvent event(final String type, final UUID workItemId, final String detail) {
-        return new WorkItemLifecycleEvent(type, "/workitems/" + workItemId,
-                workItemId.toString(), workItemId, WorkItemStatus.COMPLETED,
-                Instant.now(), "actor", detail, null, null);
+        final WorkItem wi = new WorkItem();
+        wi.id = workItemId;
+        wi.status = WorkItemStatus.COMPLETED;
+        // The factory builds the full type prefix, but these tests pass the complete type string.
+        // Extract the event suffix from the full type to use with the factory.
+        final String suffix = type.substring(type.lastIndexOf('.') + 1);
+        return WorkItemLifecycleEvent.of(suffix, wi, "actor", detail);
     }
 
     @Test

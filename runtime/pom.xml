@@ -21,6 +21,12 @@
       <version>${project.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>io.quarkiverse.work</groupId>
+      <artifactId>quarkus-work-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
     <!-- Persistence: WorkItem entity -->
     <dependency>
       <groupId>io.quarkus</groupId>

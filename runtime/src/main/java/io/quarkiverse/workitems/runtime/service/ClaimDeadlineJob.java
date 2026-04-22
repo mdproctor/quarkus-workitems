@@ -34,7 +34,7 @@ public class ClaimDeadlineJob {
         final List<WorkItem> unclaimed = workItemStore.scan(WorkItemQuery.claimExpired(now));
         for (final WorkItem item : unclaimed) {
             claimEscalationPolicy.onUnclaimedPastDeadline(item);
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ESCALATED", item.id, item.status, "system", null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ESCALATED", item, "system", null));
         }
     }
 }

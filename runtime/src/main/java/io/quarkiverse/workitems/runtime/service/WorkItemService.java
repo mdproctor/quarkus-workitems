@@ -91,7 +91,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "CREATED", request.createdBy(), null);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("CREATED", saved.id, saved.status, request.createdBy(), null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("CREATED", saved, request.createdBy(), null));
         }
         return saved;
     }
@@ -108,7 +108,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "ASSIGNED", claimantId, null);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", saved.id, saved.status, claimantId, null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", saved, claimantId, null));
         }
         return saved;
     }
@@ -124,7 +124,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "STARTED", actorId, null);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("STARTED", saved.id, saved.status, actorId, null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("STARTED", saved, actorId, null));
         }
         return saved;
     }
@@ -141,7 +141,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "COMPLETED", actorId, null);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("COMPLETED", saved.id, saved.status, actorId, resolution));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution));
         }
         return saved;
     }
@@ -157,7 +157,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "REJECTED", actorId, reason);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("REJECTED", saved.id, saved.status, actorId, reason));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason));
         }
         return saved;
     }
@@ -185,7 +185,7 @@ public class WorkItemService {
         audit(saved.id, "COMPLETED", actorId, null);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of(
-                    "COMPLETED", saved.id, saved.status, actorId, resolution, rationale, planRef));
+                    "COMPLETED", saved, actorId, resolution, rationale, planRef));
         }
         return saved;
     }
@@ -211,7 +211,7 @@ public class WorkItemService {
         audit(saved.id, "REJECTED", actorId, reason);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of(
-                    "REJECTED", saved.id, saved.status, actorId, reason, rationale, null));
+                    "REJECTED", saved, actorId, reason, rationale, null));
         }
         return saved;
     }
@@ -240,7 +240,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "DELEGATED", actorId, "to:" + saved.assigneeId);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("DELEGATED", saved.id, saved.status, actorId, "to:" + toAssigneeId));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("DELEGATED", saved, actorId, "to:" + toAssigneeId));
         }
         return saved;
     }
@@ -257,7 +257,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "RELEASED", actorId, null);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("RELEASED", saved.id, saved.status, actorId, null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("RELEASED", saved, actorId, null));
         }
         return saved;
     }
@@ -274,7 +274,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "SUSPENDED", actorId, reason);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("SUSPENDED", saved.id, saved.status, actorId, reason));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("SUSPENDED", saved, actorId, reason));
         }
         return saved;
     }
@@ -291,7 +291,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "RESUMED", actorId, null);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("RESUMED", saved.id, saved.status, actorId, null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("RESUMED", saved, actorId, null));
         }
         return saved;
     }
@@ -307,7 +307,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "CANCELLED", actorId, reason);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("CANCELLED", saved.id, saved.status, actorId, reason));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason));
         }
         return saved;
     }
@@ -319,7 +319,7 @@ public class WorkItemService {
         item.labels.add(new WorkItemLabel(path, LabelPersistence.MANUAL, appliedBy));
         final WorkItem saved = workItemStore.put(item);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("LABEL_ADDED", saved.id, saved.status, appliedBy, null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("LABEL_ADDED", saved, appliedBy, null));
         }
         return saved;
     }
@@ -335,7 +335,7 @@ public class WorkItemService {
         }
         final WorkItem saved = workItemStore.put(item);
         if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("LABEL_REMOVED", saved.id, saved.status, "system", path));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("LABEL_REMOVED", saved, "system", path));
         }
         return saved;
     }

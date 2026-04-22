@@ -119,7 +119,7 @@ public class QueueStateResource {
             // Clear the flag — the signal is consumed on first pickup
             state.relinquishable = false;
             // Fire lifecycle event so ledger, filter engine, and dashboard observers react
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", saved.id, saved.status, claimant,
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", saved, claimant,
                     "Queue pickup (relinquishable takeover)"));
             return Response.ok(WorkItemMapper.toResponse(saved)).build();
         }

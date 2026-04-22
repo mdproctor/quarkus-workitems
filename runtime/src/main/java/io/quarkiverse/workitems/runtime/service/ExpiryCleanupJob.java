@@ -49,10 +49,10 @@ public class ExpiryCleanupJob {
             entry.actor = "system";
             entry.occurredAt = now;
             auditStore.append(entry);
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("EXPIRED", item.id, item.status, "system", null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("EXPIRED", item, "system", null));
 
             escalationPolicy.onExpired(item);
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ESCALATED", item.id, item.status, "system", null));
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ESCALATED", item, "system", null));
         }
     }
 }

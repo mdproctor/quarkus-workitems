@@ -110,8 +110,9 @@ class FilterRegistryEngineTest {
                 Set.of(FilterEvent.REMOVE), "true", Map.of(),
                 List.of(ActionDescriptor.of("TEST_ACTION", Map.of())));
 
+        workItem.status = WorkItemStatus.COMPLETED;
         final WorkItemLifecycleEvent completedEvent = WorkItemLifecycleEvent.of(
-                "COMPLETED", workItem.id, WorkItemStatus.COMPLETED, "reviewer", null);
+                "COMPLETED", workItem, "reviewer", null);
 
         engine.processEvent(completedEvent, List.of(def));
 
@@ -125,8 +126,9 @@ class FilterRegistryEngineTest {
                 Set.of(FilterEvent.UPDATE), "true", Map.of(),
                 List.of(ActionDescriptor.of("TEST_ACTION", Map.of())));
 
+        workItem.status = WorkItemStatus.ASSIGNED;
         final WorkItemLifecycleEvent assignedEvent = WorkItemLifecycleEvent.of(
-                "ASSIGNED", workItem.id, WorkItemStatus.ASSIGNED, "reviewer", null);
+                "ASSIGNED", workItem, "reviewer", null);
 
         engine.processEvent(assignedEvent, List.of(def));
 
@@ -134,7 +136,7 @@ class FilterRegistryEngineTest {
     }
 
     private WorkItemLifecycleEvent createdEvent() {
-        return WorkItemLifecycleEvent.of("CREATED", workItem.id,
-                WorkItemStatus.PENDING, "system", null);
+        workItem.status = WorkItemStatus.PENDING;
+        return WorkItemLifecycleEvent.of("CREATED", workItem, "system", null);
     }
 }
