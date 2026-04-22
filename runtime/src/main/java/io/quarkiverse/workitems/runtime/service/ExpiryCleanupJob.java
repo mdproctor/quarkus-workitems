@@ -8,6 +8,7 @@ import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import io.quarkiverse.work.api.EscalationPolicy;
 import io.quarkiverse.workitems.runtime.event.WorkItemLifecycleEvent;
 import io.quarkiverse.workitems.runtime.model.AuditEntry;
 import io.quarkiverse.workitems.runtime.model.WorkItem;
@@ -51,8 +52,9 @@ public class ExpiryCleanupJob {
             auditStore.append(entry);
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("EXPIRED", item, "system", null));
 
-            escalationPolicy.onExpired(item);
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ESCALATED", item, "system", null));
+            final WorkItemLifecycleEvent escalatedEvent = WorkItemLifecycleEvent.of("ESCALATED", item, "system", null);
+            escalationPolicy.escalate(escalatedEvent);
+            lifecycleEvent.fire(escalatedEvent);
         }
     }
 }

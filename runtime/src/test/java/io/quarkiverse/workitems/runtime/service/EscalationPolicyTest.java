@@ -14,6 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.quarkiverse.work.api.EscalationPolicy;
+import io.quarkiverse.work.api.WorkEventType;
+import io.quarkiverse.work.api.WorkLifecycleEvent;
 import io.quarkiverse.workitems.runtime.model.AuditEntry;
 import io.quarkiverse.workitems.runtime.model.WorkItem;
 import io.quarkiverse.workitems.runtime.model.WorkItemPriority;
@@ -97,6 +100,29 @@ class EscalationPolicyTest {
     }
 
     // -------------------------------------------------------------------------
+    // Event helper — build a WorkLifecycleEvent for a given type + WorkItem
+    // -------------------------------------------------------------------------
+
+    private static WorkLifecycleEvent makeEvent(final WorkEventType type, final WorkItem workItem) {
+        return new WorkLifecycleEvent() {
+            @Override
+            public WorkEventType eventType() {
+                return type;
+            }
+
+            @Override
+            public Map<String, Object> context() {
+                return Map.of();
+            }
+
+            @Override
+            public Object source() {
+                return workItem;
+            }
+        };
+    }
+
+    // -------------------------------------------------------------------------
     // Fixtures
     // -------------------------------------------------------------------------
 
@@ -112,9 +138,9 @@ class EscalationPolicyTest {
         workItemRepo = new TestWorkItemRepo();
         auditRepo = new TestAuditRepo();
 
-        // NotifyEscalationPolicy — expiredEvent field left null; onExpired fires it but
-        // the status-only tests do not assert on events. Tests verify no status change only.
-        notifyPolicy = new NotifyEscalationPolicy();
+        // NotifyEscalationPolicy — expiredEvent left null; escalate(EXPIRED) fires it,
+        // but the status-only tests guard via try/catch. Tests for CLAIM_EXPIRED do not fire it.
+        notifyPolicy = new NotifyEscalationPolicy(null);
 
         autoRejectPolicy = new AutoRejectEscalationPolicy();
         inject(autoRejectPolicy, "workItemStore", workItemRepo);
@@ -142,12 +168,12 @@ class EscalationPolicyTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void notifyPolicy_onExpired_doesNotChangeStatus() {
+    void notifyPolicy_escalate_expired_doesNotChangeStatus() {
         WorkItem wi = workItem(WorkItemStatus.EXPIRED);
-        // notifyPolicy logs and fires event — expiredEvent is null so we guard
+        // notifyPolicy logs and fires CDI event — expiredEvent is null so we guard
         // the status-only assertion without relying on CDI event delivery
         try {
-            notifyPolicy.onExpired(wi);
+            notifyPolicy.escalate(makeEvent(WorkEventType.EXPIRED, wi));
         } catch (NullPointerException ignored) {
             // CDI Event<> not wired in pure JUnit context — expected; status is unchanged
         }
@@ -155,9 +181,10 @@ class EscalationPolicyTest {
     }
 
     @Test
-    void notifyPolicy_onUnclaimedPastDeadline_doesNotChangeStatus() {
+    void notifyPolicy_escalate_claimExpired_doesNotChangeStatus() {
         WorkItem wi = workItem(WorkItemStatus.PENDING);
-        notifyPolicy.onUnclaimedPastDeadline(wi);
+        // CLAIM_EXPIRED only logs — no CDI event fired, no NPE
+        notifyPolicy.escalate(makeEvent(WorkEventType.CLAIM_EXPIRED, wi));
         assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
     }
 
@@ -166,25 +193,25 @@ class EscalationPolicyTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void autoRejectPolicy_onExpired_transitionsToRejected() {
+    void autoRejectPolicy_escalate_expired_transitionsToRejected() {
         WorkItem wi = workItem(WorkItemStatus.EXPIRED);
-        autoRejectPolicy.onExpired(wi);
+        autoRejectPolicy.escalate(makeEvent(WorkEventType.EXPIRED, wi));
         assertThat(wi.status).isEqualTo(WorkItemStatus.REJECTED);
         assertThat(wi.completedAt).isNotNull();
     }
 
     @Test
-    void autoRejectPolicy_onExpired_writesAuditEntry() {
+    void autoRejectPolicy_escalate_expired_writesAuditEntry() {
         WorkItem wi = workItem(WorkItemStatus.EXPIRED);
-        autoRejectPolicy.onExpired(wi);
+        autoRejectPolicy.escalate(makeEvent(WorkEventType.EXPIRED, wi));
         List<AuditEntry> trail = auditRepo.findByWorkItemId(wi.id);
         assertThat(trail).anyMatch(e -> "REJECTED".equals(e.event) && "system".equals(e.actor));
     }
 
     @Test
-    void autoRejectPolicy_onUnclaimedPastDeadline_doesNothing() {
+    void autoRejectPolicy_escalate_claimExpired_doesNothing() {
         WorkItem wi = workItem(WorkItemStatus.PENDING);
-        autoRejectPolicy.onUnclaimedPastDeadline(wi);
+        autoRejectPolicy.escalate(makeEvent(WorkEventType.CLAIM_EXPIRED, wi));
         assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
     }
 
@@ -193,28 +220,28 @@ class EscalationPolicyTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void reassignPolicy_withCandidateGroups_returnsToPending() {
+    void reassignPolicy_escalate_expired_withCandidateGroups_returnsToPending() {
         WorkItem wi = workItem(WorkItemStatus.ASSIGNED);
         wi.assigneeId = "alice";
         wi.candidateGroups = "team-a";
         workItemRepo.put(wi);
 
-        reassignPolicy.onExpired(wi);
+        reassignPolicy.escalate(makeEvent(WorkEventType.EXPIRED, wi));
 
         assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
         assertThat(wi.assigneeId).isNull();
     }
 
     @Test
-    void reassignPolicy_withoutCandidateGroups_statusRemainsExpired() {
+    void reassignPolicy_escalate_expired_withoutCandidateGroups_statusRemainsExpired() {
         WorkItem wi = workItem(WorkItemStatus.EXPIRED);
         wi.candidateGroups = null;
         wi.candidateUsers = null;
         workItemRepo.put(wi);
 
-        // Falls back to notifyPolicy.onExpired — CDI Event null causes NPE, status unchanged
+        // Falls back to notifyPolicy.escalate(EXPIRED) — CDI Event null causes NPE, status unchanged
         try {
-            reassignPolicy.onExpired(wi);
+            reassignPolicy.escalate(makeEvent(WorkEventType.EXPIRED, wi));
         } catch (NullPointerException ignored) {
             // Expected: notify fires CDI event that is not wired in pure JUnit context
         }
@@ -223,13 +250,13 @@ class EscalationPolicyTest {
     }
 
     @Test
-    void reassignPolicy_onUnclaimedPastDeadline_withCandidateGroups_returnsToPending() {
+    void reassignPolicy_escalate_claimExpired_withCandidateGroups_returnsToPending() {
         WorkItem wi = workItem(WorkItemStatus.PENDING);
         wi.assigneeId = "alice";
         wi.candidateGroups = "team-a";
         workItemRepo.put(wi);
 
-        reassignPolicy.onUnclaimedPastDeadline(wi);
+        reassignPolicy.escalate(makeEvent(WorkEventType.CLAIM_EXPIRED, wi));
 
         assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
         assertThat(wi.assigneeId).isNull();

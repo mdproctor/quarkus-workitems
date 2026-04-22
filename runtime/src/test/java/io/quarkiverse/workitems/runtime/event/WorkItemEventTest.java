@@ -270,7 +270,7 @@ class WorkItemEventTest {
     }
 
     @Test
-    void claimDeadlineJob_emitsEscalatedEvent() {
+    void claimDeadlineJob_emitsClaimExpiredEvent() {
         WorkItem wi = new WorkItem();
         wi.title = "Past claim deadline";
         wi.status = WorkItemStatus.PENDING;
@@ -283,8 +283,9 @@ class WorkItemEventTest {
 
         claimDeadlineJob.checkUnclaimedPastDeadline();
 
-        List<WorkItemLifecycleEvent> escalatedEvents = observer.ofType("escalated");
-        assertThat(escalatedEvents).anyMatch(e -> e.workItemId().equals(wi.id));
+        // ClaimDeadlineJob now fires CLAIM_EXPIRED (not generic ESCALATED)
+        List<WorkItemLifecycleEvent> claimExpiredEvents = observer.ofType("claim_expired");
+        assertThat(claimExpiredEvents).anyMatch(e -> e.workItemId().equals(wi.id));
     }
 
     // -------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 
+import io.quarkiverse.work.api.EscalationPolicy;
 import io.quarkiverse.workitems.runtime.config.WorkItemsConfig;
 
 @ApplicationScoped
