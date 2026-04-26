@@ -81,6 +81,72 @@ public interface WorkItemsConfig {
     }
 
     /**
+     * Business-hours calendar configuration.
+     *
+     * @return the business hours configuration group
+     */
+    @io.smallrye.config.WithName("business-hours")
+    BusinessHoursConfig businessHours();
+
+    /**
+     * Business-hours configuration for SLA deadline calculation.
+     */
+    interface BusinessHoursConfig {
+
+        /**
+         * Timezone in which business hours are defined.
+         *
+         * @return IANA timezone ID; defaults to {@code "UTC"}
+         */
+        @WithDefault("UTC")
+        String timezone();
+
+        /**
+         * Business day start time (inclusive), in HH:mm format.
+         *
+         * @return start time; defaults to {@code "09:00"}
+         */
+        @WithDefault("09:00")
+        String start();
+
+        /**
+         * Business day end time (exclusive), in HH:mm format.
+         *
+         * @return end time; defaults to {@code "17:00"}
+         */
+        @WithDefault("17:00")
+        String end();
+
+        /**
+         * Comma-separated working days.
+         * Accepted values: {@code MON,TUE,WED,THU,FRI,SAT,SUN}.
+         *
+         * @return work days; defaults to {@code "MON,TUE,WED,THU,FRI"}
+         */
+        @WithDefault("MON,TUE,WED,THU,FRI")
+        String workDays();
+
+        /**
+         * Static holiday list — comma-separated dates in {@code YYYY-MM-DD} format.
+         * Ignored when {@link #holidayIcalUrl()} is set.
+         * If absent, no static holidays are configured.
+         *
+         * @return holiday dates; empty if not configured
+         */
+        java.util.Optional<String> holidays();
+
+        /**
+         * URL of an iCal feed ({@code .ics}) providing public holidays.
+         * When set, the iCal-backed {@code HolidayCalendar} activates and the
+         * static {@link #holidays()} list is ignored.
+         * If absent, iCal holidays are disabled.
+         *
+         * @return iCal URL; empty if not configured
+         */
+        java.util.Optional<String> holidayIcalUrl();
+    }
+
+    /**
      * Worker selection strategy configuration.
      *
      * @return the routing configuration group

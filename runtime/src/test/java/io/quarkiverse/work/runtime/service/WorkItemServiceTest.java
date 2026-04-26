@@ -182,6 +182,41 @@ class WorkItemServiceTest {
             public RoutingConfig routing() {
                 return () -> "least-loaded";
             }
+
+            @Override
+            public BusinessHoursConfig businessHours() {
+                return new BusinessHoursConfig() {
+                    @Override
+                    public String timezone() {
+                        return "UTC";
+                    }
+
+                    @Override
+                    public String start() {
+                        return "09:00";
+                    }
+
+                    @Override
+                    public String end() {
+                        return "17:00";
+                    }
+
+                    @Override
+                    public String workDays() {
+                        return "MON,TUE,WED,THU,FRI";
+                    }
+
+                    @Override
+                    public java.util.Optional<String> holidays() {
+                        return java.util.Optional.empty();
+                    }
+
+                    @Override
+                    public java.util.Optional<String> holidayIcalUrl() {
+                        return java.util.Optional.empty();
+                    }
+                };
+            }
         };
     }
 
@@ -979,6 +1014,41 @@ class WorkItemServiceTest {
             @Override
             public RoutingConfig routing() {
                 return () -> "least-loaded";
+            }
+
+            @Override
+            public BusinessHoursConfig businessHours() {
+                return new BusinessHoursConfig() {
+                    @Override
+                    public String timezone() {
+                        return "UTC";
+                    }
+
+                    @Override
+                    public String start() {
+                        return "09:00";
+                    }
+
+                    @Override
+                    public String end() {
+                        return "17:00";
+                    }
+
+                    @Override
+                    public String workDays() {
+                        return "MON,TUE,WED,THU,FRI";
+                    }
+
+                    @Override
+                    public java.util.Optional<String> holidays() {
+                        return java.util.Optional.empty();
+                    }
+
+                    @Override
+                    public java.util.Optional<String> holidayIcalUrl() {
+                        return java.util.Optional.empty();
+                    }
+                };
             }
         };
         WorkItemService svc = new WorkItemService(repo, auditStore, noClaimConfig,
