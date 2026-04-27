@@ -130,7 +130,7 @@ public class FinanceApprovalScenario {
                 "finance", "budget-request", WorkItemPriority.NORMAL,
                 null, "finance-team", null, null, "hr-system",
                 "{\"amount\": 2400, \"currency\": \"GBP\", \"category\": \"training\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(1,
                 "NORMAL expense — finance/approval only (standard team queue)",
                 expense.id, inferredPaths(expense), manualPaths(expense),
@@ -143,7 +143,7 @@ public class FinanceApprovalScenario {
                 "finance", "budget-reallocation", WorkItemPriority.HIGH,
                 null, "finance-team", null, null, "finance-system",
                 "{\"amount\": 15000, \"from\": \"events\", \"to\": \"digital\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(2,
                 "HIGH budget reallocation — finance/approval only (CRITICAL threshold not met for exec review)",
                 realloc.id, inferredPaths(realloc), manualPaths(realloc),
@@ -156,7 +156,7 @@ public class FinanceApprovalScenario {
                 "finance", "emergency-spend", WorkItemPriority.CRITICAL,
                 null, "finance-team,executive-team", null, null, "ops-system",
                 "{\"amount\": 180000, \"currency\": \"USD\", \"incident_id\": \"INC-9981\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(3,
                 "CRITICAL emergency spend — both finance/approval (standard) AND finance/exec-review (executive oversight)",
                 emergency.id, inferredPaths(emergency), manualPaths(emergency),

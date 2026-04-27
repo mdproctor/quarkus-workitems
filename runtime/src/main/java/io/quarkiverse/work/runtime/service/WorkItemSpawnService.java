@@ -132,7 +132,9 @@ public class WorkItemSpawnService implements SpawnPort {
                     null, // followUpDate
                     null, // labels
                     null, // confidenceScore
-                    spec.callerRef());
+                    spec.callerRef(),
+                    template.defaultClaimBusinessHours,
+                    template.defaultExpiryBusinessHours);
 
             final WorkItem child = workItemService.create(createRequest);
 

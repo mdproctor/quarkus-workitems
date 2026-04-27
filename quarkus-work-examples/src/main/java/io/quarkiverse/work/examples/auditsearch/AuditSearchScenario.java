@@ -162,6 +162,6 @@ public class AuditSearchScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
     }
 }

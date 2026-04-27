@@ -146,7 +146,7 @@ public class SecurityEscalationScenario {
                 "security", "login-anomaly", WorkItemPriority.HIGH,
                 null, "security-team", null, null, "siem-system",
                 "{\"source_ip_range\": \"185.220.x.x\", \"attempts\": 2400, \"period_minutes\": 10}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(1,
                 "HIGH security anomaly — filter A fires: security/incident; filter B (CRITICAL) does not match; filter C (cascade) cannot fire without priority/critical",
                 highIncident.id, inferredPaths(highIncident), manualPaths(highIncident),
@@ -160,7 +160,7 @@ public class SecurityEscalationScenario {
                 null, "security-team,legal-team,executive-team", null, null, "forensics-system",
                 "{\"records_affected\": 340000, \"data_types\": [\"name\", \"email\", \"password_hash\"], " +
                         "\"gdpr_window_hours\": 72, \"incident_id\": \"SEC-BREACH-2026-001\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(2,
                 "CRITICAL data breach — filter A: security/incident, filter B: priority/critical, filter C cascades: security/exec-escalate — 3 queue ADDED events",
                 criticalBreach.id, inferredPaths(criticalBreach), manualPaths(criticalBreach),

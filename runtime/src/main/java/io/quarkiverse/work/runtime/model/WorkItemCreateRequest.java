@@ -27,6 +27,10 @@ import io.quarkiverse.work.runtime.api.WorkItemLabelResponse;
  * @param labels Optional list of {@link WorkItemLabelResponse} labels to attach at creation; only MANUAL labels accepted.
  * @param confidenceScore Confidence score from the AI agent that created this WorkItem (0.0–1.0); null if not AI-created.
  * @param callerRef Opaque caller-supplied routing key set at spawn time; null for WorkItems not created via spawn.
+ * @param claimDeadlineBusinessHours Claim deadline expressed in business hours; resolved to absolute {@code claimDeadline}
+ *        via {@code BusinessCalendar} at create time. Takes precedence over {@code claimDeadline} when set.
+ * @param expiresAtBusinessHours Completion deadline expressed in business hours; resolved to absolute {@code expiresAt}
+ *        via {@code BusinessCalendar} at create time. Takes precedence over {@code expiresAt} when set.
  */
 public record WorkItemCreateRequest(
         String title,
@@ -45,5 +49,7 @@ public record WorkItemCreateRequest(
         Instant followUpDate,
         List<WorkItemLabelResponse> labels,
         Double confidenceScore,
-        String callerRef) {
+        String callerRef,
+        Integer claimDeadlineBusinessHours,
+        Integer expiresAtBusinessHours) {
 }

@@ -122,7 +122,7 @@ public class DocumentQueueScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
         final WorkItem wi1 = workItemService.create(req1);
         steps.add(new StepLog(1, desc1, wi1.id));
 
@@ -148,7 +148,7 @@ public class DocumentQueueScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
         final WorkItem wi2 = workItemService.create(req2);
         steps.add(new StepLog(2, desc2, wi2.id));
 
@@ -174,7 +174,7 @@ public class DocumentQueueScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
         final WorkItem wi3 = workItemService.create(req3);
         steps.add(new StepLog(3, desc3, wi3.id));
 

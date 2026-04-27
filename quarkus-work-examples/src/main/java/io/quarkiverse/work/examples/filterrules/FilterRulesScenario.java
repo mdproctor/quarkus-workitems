@@ -111,7 +111,7 @@ public class FilterRulesScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
 
         final WorkItem highPriorityWi = workItemService.create(highPriorityRequest);
         steps.add(new StepLog(2, description2, highPriorityWi.id));
@@ -137,7 +137,7 @@ public class FilterRulesScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
 
         final WorkItem normalPriorityWi = workItemService.create(normalPriorityRequest);
         steps.add(new StepLog(3, description3, normalPriorityWi.id));

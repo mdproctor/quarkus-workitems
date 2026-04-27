@@ -22,5 +22,7 @@ public record CreateWorkItemRequest(
         Instant followUpDate,
         List<WorkItemLabelResponse> labels,
         Double confidenceScore,
-        String callerRef) {
+        String callerRef,
+        Integer claimDeadlineBusinessHours,
+        Integer expiresAtBusinessHours) {
 }

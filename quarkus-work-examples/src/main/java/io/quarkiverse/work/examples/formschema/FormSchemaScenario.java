@@ -145,7 +145,7 @@ public class FormSchemaScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
         final WorkItem wi = workItemService.create(request);
         steps.add(new StepLog(4, description4, wi.id));
 

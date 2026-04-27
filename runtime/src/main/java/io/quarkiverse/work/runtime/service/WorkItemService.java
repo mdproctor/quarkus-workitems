@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.quarkiverse.work.api.AssignmentTrigger;
+import io.quarkiverse.work.api.BusinessCalendar;
 import io.quarkiverse.work.api.ClaimSlaContext;
 import io.quarkiverse.work.api.ClaimSlaPolicy;
 import io.quarkiverse.work.runtime.config.WorkItemsConfig;
@@ -37,6 +38,9 @@ public class WorkItemService {
 
     @Inject
     Event<WorkItemLifecycleEvent> lifecycleEvent;
+
+    @Inject
+    jakarta.enterprise.inject.Instance<BusinessCalendar> businessCalendar;
 
     @Inject
     public WorkItemService(final WorkItemStore workItemStore,
@@ -73,12 +77,21 @@ public class WorkItemService {
         final Instant now = Instant.now();
         item.createdAt = now;
         item.updatedAt = now;
-        item.expiresAt = request.expiresAt() != null
-                ? request.expiresAt()
-                : now.plus(config.defaultExpiryHours(), ChronoUnit.HOURS);
 
+        // expiresAt: absolute > business hours > config default (wall-clock)
+        if (request.expiresAt() != null) {
+            item.expiresAt = request.expiresAt();
+        } else if (request.expiresAtBusinessHours() != null) {
+            item.expiresAt = resolveBusinessHours(now, request.expiresAtBusinessHours());
+        } else {
+            item.expiresAt = now.plus(config.defaultExpiryHours(), ChronoUnit.HOURS);
+        }
+
+        // claimDeadline: absolute > business hours > config default (wall-clock)
         if (request.claimDeadline() != null) {
             item.claimDeadline = request.claimDeadline();
+        } else if (request.claimDeadlineBusinessHours() != null) {
+            item.claimDeadline = resolveBusinessHours(now, request.claimDeadlineBusinessHours());
         } else if (config.defaultClaimHours() > 0) {
             item.claimDeadline = now.plus(config.defaultClaimHours(), ChronoUnit.HOURS);
         }
@@ -400,7 +413,7 @@ public class WorkItemService {
                 title, source.description, source.category, source.formKey,
                 source.priority, null, source.candidateGroups, source.candidateUsers,
                 source.requiredCapabilities, createdBy, source.payload,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
 
         WorkItem clone = create(req);
 
@@ -433,5 +446,19 @@ public class WorkItemService {
         entry.detail = detail;
         entry.occurredAt = Instant.now();
         auditStore.append(entry);
+    }
+
+    /**
+     * Resolve a business-hours count to an absolute {@link Instant} using the configured
+     * {@link BusinessCalendar}. Falls back to wall-clock hours when no BusinessCalendar CDI bean
+     * is available.
+     */
+    private Instant resolveBusinessHours(final Instant from, final int businessHours) {
+        if (businessCalendar != null && !businessCalendar.isUnsatisfied()) {
+            final java.time.ZoneId zone = java.time.ZoneId.of(config.businessHours().timezone());
+            return businessCalendar.get().addBusinessDuration(from, Duration.ofHours(businessHours), zone);
+        }
+        // Fallback: treat as wall-clock hours when no calendar configured
+        return from.plus(businessHours, ChronoUnit.HOURS);
     }
 }

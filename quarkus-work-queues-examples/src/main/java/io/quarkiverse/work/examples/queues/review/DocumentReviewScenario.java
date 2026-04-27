@@ -198,7 +198,7 @@ public class DocumentReviewScenario {
                 "security-docs", "migration-guide", WorkItemPriority.NORMAL,
                 null, "security-writers,docs-team", null, null, "doc-system",
                 "{\"doc_type\": \"security-advisory\", \"publish_deadline\": \"2026-04-18\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(1,
                 "Security advisory — priority=NORMAL but candidateGroups contains 'security-writers'. " +
                         "Lambda filter overrides: review/urgent + review/urgent/unassigned",
@@ -214,7 +214,7 @@ public class DocumentReviewScenario {
                 "release-docs", "release-notes", WorkItemPriority.HIGH,
                 null, "docs-team", null, null, "release-system",
                 "{\"version\": \"3.2\", \"breaking_changes\": 3, \"new_features\": 12}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(2,
                 "Release notes — priority=HIGH → JEXL filter: review/standard + review/standard/unassigned",
                 releaseNotes.id, inferredPaths(releaseNotes), manualPaths(releaseNotes),
@@ -229,7 +229,7 @@ public class DocumentReviewScenario {
                 "tutorials", "quick-start", WorkItemPriority.NORMAL,
                 null, "docs-team", null, null, "doc-system",
                 "{\"estimated_reading_time_min\": 10, \"skill_level\": \"beginner\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(3,
                 "Tutorial — priority=NORMAL → JEXL filter: review/routine + review/routine/unassigned",
                 tutorial.id, inferredPaths(tutorial), manualPaths(tutorial),

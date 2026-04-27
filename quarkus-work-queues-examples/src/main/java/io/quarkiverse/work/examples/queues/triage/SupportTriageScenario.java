@@ -152,7 +152,7 @@ public class SupportTriageScenario {
                 "infrastructure", null, WorkItemPriority.CRITICAL,
                 null, "ops-team", null, null, "incident-detector",
                 "{\"affected_services\": 12, \"error\": \"Connection refused\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(1,
                 "CRITICAL production incident created — filter A fires: sla/critical + queue/fast-track",
                 critical.id, inferredPaths(critical), manualPaths(critical),
@@ -165,7 +165,7 @@ public class SupportTriageScenario {
                 "authentication", null, WorkItemPriority.HIGH,
                 null, "support-tier1", null, null, "support-portal",
                 "{\"region\": \"EU\", \"affected_users\": 47}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(2,
                 "HIGH unassigned ticket — filter B fires: intake/triage; filter C cascades: team/support-lead",
                 high.id, inferredPaths(high), manualPaths(high),

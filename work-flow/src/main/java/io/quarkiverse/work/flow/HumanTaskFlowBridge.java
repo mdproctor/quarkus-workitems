@@ -64,7 +64,7 @@ public class HumanTaskFlowBridge {
                 priority != null ? priority : WorkItemPriority.NORMAL,
                 assigneeId, null, null, null,
                 "work-flow",
-                payload, null, null, null, null, null, null);
+                payload, null, null, null, null, null, null, null, null);
 
         final WorkItem workItem = workItemService.create(request);
         return Uni.createFrom().completionStage(registry.register(workItem.id));
@@ -93,7 +93,7 @@ public class HumanTaskFlowBridge {
                 priority != null ? priority : WorkItemPriority.NORMAL,
                 null, candidateGroups, null, null,
                 "work-flow",
-                payload, null, null, null, null, null, null);
+                payload, null, null, null, null, null, null, null, null);
 
         final WorkItem workItem = workItemService.create(request);
         return Uni.createFrom().completionStage(registry.register(workItem.id));

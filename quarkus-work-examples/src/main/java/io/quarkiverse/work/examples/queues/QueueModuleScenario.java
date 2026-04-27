@@ -121,7 +121,7 @@ public class QueueModuleScenario {
                 null,
                 List.of(new WorkItemLabelResponse("contract-review/nda", LabelPersistence.MANUAL, ACTOR_CREATOR)),
                 null,
-                null));
+                null, null, null));
         steps.add(new StepLog(1, description1, wiA.id));
 
         // Step 2: create WorkItem B — compliance/gdpr
@@ -145,7 +145,7 @@ public class QueueModuleScenario {
                 null,
                 List.of(new WorkItemLabelResponse("compliance/gdpr", LabelPersistence.MANUAL, ACTOR_CREATOR)),
                 null,
-                null));
+                null, null, null));
         steps.add(new StepLog(2, description2, wiB.id));
 
         // Step 3: create WorkItem C — contract-review/ip
@@ -169,7 +169,7 @@ public class QueueModuleScenario {
                 null,
                 List.of(new WorkItemLabelResponse("contract-review/ip", LabelPersistence.MANUAL, ACTOR_CREATOR)),
                 null,
-                null));
+                null, null, null));
         steps.add(new StepLog(3, description3, wiC.id));
 
         // Step 4: create the contract-review queue view

@@ -78,7 +78,7 @@ public class SpawnScenario {
                 null,
                 null,
                 null,
-                null));
+                null, null, null));
         steps.add(new StepLog(2, "Creates loan-application WorkItem (parent)", parent.id));
 
         // Step 3: spawn three parallel child WorkItems

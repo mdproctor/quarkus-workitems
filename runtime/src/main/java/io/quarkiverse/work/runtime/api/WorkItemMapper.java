@@ -54,7 +54,8 @@ public final class WorkItemMapper {
                 req.priority(), req.assigneeId(), req.candidateGroups(),
                 req.candidateUsers(), req.requiredCapabilities(), req.createdBy(),
                 req.payload(), req.claimDeadline(), req.expiresAt(), req.followUpDate(),
-                req.labels(), req.confidenceScore(), req.callerRef());
+                req.labels(), req.confidenceScore(), req.callerRef(),
+                req.claimDeadlineBusinessHours(), req.expiresAtBusinessHours());
     }
 
     static WorkItemLabelResponse toLabelResponse(final WorkItemLabel label) {

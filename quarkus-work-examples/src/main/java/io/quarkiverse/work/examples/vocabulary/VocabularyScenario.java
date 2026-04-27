@@ -127,7 +127,7 @@ public class VocabularyScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
 
         final WorkItem annualLeaveWi = workItemService.create(annualLeaveRequest);
 
@@ -148,7 +148,7 @@ public class VocabularyScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
 
         workItemService.create(sickLeaveRequest);
         steps.add(new StepLog(3, description3, annualLeaveWi.id));

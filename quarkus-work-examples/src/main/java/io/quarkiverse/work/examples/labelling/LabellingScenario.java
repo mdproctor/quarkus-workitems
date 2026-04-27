@@ -99,7 +99,7 @@ public class LabellingScenario {
                 null,
                 null,
                 null,
-                null);
+                null, null, null);
 
         final WorkItem wi = workItemService.create(request);
         steps.add(new StepLog(1, description1, wi.id));

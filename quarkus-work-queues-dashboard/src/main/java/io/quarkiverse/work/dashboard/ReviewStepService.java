@@ -123,7 +123,7 @@ public class ReviewStepService {
                 "Update TLS guide. Must publish before customer notification Friday.",
                 "security-docs", "migration-guide", WorkItemPriority.NORMAL,
                 null, "security-writers,docs-team", null, null, "doc-system",
-                "{\"doc_type\": \"security-advisory\"}", null, null, null, null, null, null));
+                "{\"doc_type\": \"security-advisory\"}", null, null, null, null, null, null, null, null));
         advisoryId.set(advisory.id);
 
         final WorkItem releaseNotes = workItemService.create(new WorkItemCreateRequest(
@@ -131,7 +131,7 @@ public class ReviewStepService {
                 "Document all features and breaking changes for the v3.2 release.",
                 "release-docs", "release-notes", WorkItemPriority.HIGH,
                 null, "docs-team", null, null, "release-system",
-                null, null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null, null));
         releaseNotesId.set(releaseNotes.id);
 
         final WorkItem tutorial = workItemService.create(new WorkItemCreateRequest(
@@ -139,7 +139,7 @@ public class ReviewStepService {
                 "Write a 10-minute getting-started guide for new users.",
                 "tutorials", "quick-start", WorkItemPriority.NORMAL,
                 null, "docs-team", null, null, "doc-system",
-                null, null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null, null));
         tutorialId.set(tutorial.id);
 
         step.set(1);

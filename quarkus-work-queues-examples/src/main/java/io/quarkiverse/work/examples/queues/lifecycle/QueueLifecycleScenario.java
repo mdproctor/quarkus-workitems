@@ -137,7 +137,7 @@ public class QueueLifecycleScenario {
         final WorkItemCreateRequest createReq = new WorkItemCreateRequest(
                 "Queue lifecycle demo item", null, "demo", null,
                 WorkItemPriority.HIGH, null, null, null, null,
-                "demo", null, null, null, null, null, null, null);
+                "demo", null, null, null, null, null, null, null, null, null);
         final WorkItem wi = workItemService.create(createReq);
         final UUID itemId = wi.id;
 

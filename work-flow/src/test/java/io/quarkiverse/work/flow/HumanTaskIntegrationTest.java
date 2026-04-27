@@ -139,7 +139,7 @@ class HumanTaskIntegrationTest {
         // Create and complete a DIFFERENT WorkItem (not registered in registry)
         WorkItemCreateRequest req = new WorkItemCreateRequest(
                 "Other item", null, null, null, WorkItemPriority.NORMAL,
-                "frank", null, null, null, "test", null, null, null, null, null, null, null);
+                "frank", null, null, null, "test", null, null, null, null, null, null, null, null, null);
         WorkItem other = service.create(req);
         service.claim(other.id, "frank");
         service.start(other.id, "frank");

@@ -1857,14 +1857,14 @@ Add this test to `LedgerIntegrationTest.java`:
         final WorkItemCreateRequest parentReq = new WorkItemCreateRequest(
                 "Loan Application", null, "loan", null,
                 null, null, null, null, null, "finance-system",
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
         final WorkItem parent = workItemService.create(parentReq);
 
         // Create child (as spawn would do — same mechanism)
         final WorkItemCreateRequest childReq = new WorkItemCreateRequest(
                 "Credit Check", null, "credit", null,
                 null, null, null, null, null, "system:spawn",
-                null, null, null, null, null, null, "case:loan-1/pi:credit");
+                null, null, null, null, null, null, "case:loan-1/pi:credit", null, null);
         final WorkItem child = workItemService.create(childReq);
 
         // Fetch ledger entries

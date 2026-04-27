@@ -76,7 +76,7 @@ class EscalationSummaryResourceTest {
                 null,
                 null,
                 Instant.now().minusSeconds(10), // already expired
-                null, null, null, null);
+                null, null, null, null, null, null);
 
         final var wi = workItemService.create(req);
 

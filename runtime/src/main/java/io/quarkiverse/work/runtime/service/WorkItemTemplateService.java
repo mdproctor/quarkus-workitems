@@ -113,7 +113,9 @@ public class WorkItemTemplateService {
                 null, // followUpDate
                 null, // labels — applied separately so addLabel fires LABEL_ADDED events
                 null, // confidenceScore — template-spawned items have no AI confidence
-                null); // callerRef — not set for template-spawned items
+                null, // callerRef — not set for template-spawned items
+                template.defaultClaimBusinessHours, // business hours claim deadline from template
+                template.defaultExpiryBusinessHours); // business hours expiry from template
     }
 
     /**

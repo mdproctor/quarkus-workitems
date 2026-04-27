@@ -130,7 +130,7 @@ public class LegalRoutingScenario {
                 "legal", "contract-review", WorkItemPriority.NORMAL,
                 null, "legal-team", null, null, "contract-service",
                 "{\"vendor\": \"Acme Corp\", \"contract_type\": \"SaaS\", \"renewal_date\": \"2026-06-01\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(1,
                 "NORMAL legal contract review — JEXL filter fires: legal/review; JQ filter (legal+HIGH) does not match",
                 contractReview.id, inferredPaths(contractReview), manualPaths(contractReview),
@@ -143,7 +143,7 @@ public class LegalRoutingScenario {
                 "legal", "nda-breach", WorkItemPriority.HIGH,
                 null, "legal-team,executive-team", null, null, "hr-system",
                 "{\"employee_id\": \"EMP-4521\", \"disclosure_type\": \"roadmap\", \"channel\": \"LinkedIn\"}",
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         steps.add(new QueueScenarioStep(2,
                 "HIGH legal NDA dispute — JEXL fires: legal/review; JQ fires: legal/urgent — two filters, two queues",
                 ndaDispute.id, inferredPaths(ndaDispute), manualPaths(ndaDispute),

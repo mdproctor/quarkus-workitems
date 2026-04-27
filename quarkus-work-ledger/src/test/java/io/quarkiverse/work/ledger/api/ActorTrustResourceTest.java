@@ -57,7 +57,7 @@ class ActorTrustResourceTest {
         final WorkItemCreateRequest req = new WorkItemCreateRequest(
                 "Trust REST test", null, null, null,
                 WorkItemPriority.NORMAL, null, null, null, null,
-                "system", null, null, null, null, null, null, null);
+                "system", null, null, null, null, null, null, null, null, null);
         final WorkItem wi = workItemService.create(req);
         workItemService.claim(wi.id, actor);
         workItemService.start(wi.id, actor);

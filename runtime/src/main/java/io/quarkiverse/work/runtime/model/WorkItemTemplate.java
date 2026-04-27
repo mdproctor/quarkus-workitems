@@ -96,6 +96,22 @@ public class WorkItemTemplate extends PanacheEntityBase {
     public Integer defaultClaimHours;
 
     /**
+     * Default completion deadline in <em>business hours</em>. When set, takes precedence
+     * over {@link #defaultExpiryHours} and is resolved via {@code BusinessCalendar}
+     * at WorkItem creation time.
+     */
+    @Column(name = "default_expiry_business_hours")
+    public Integer defaultExpiryBusinessHours;
+
+    /**
+     * Default claim deadline in <em>business hours</em>. When set, takes precedence
+     * over {@link #defaultClaimHours} and is resolved via {@code BusinessCalendar}
+     * at WorkItem creation time.
+     */
+    @Column(name = "default_claim_business_hours")
+    public Integer defaultClaimBusinessHours;
+
+    /**
      * Default JSON payload copied to every instantiated WorkItem.
      * May contain domain-specific context pre-filled for the process.
      */
