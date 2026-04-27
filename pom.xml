@@ -28,6 +28,7 @@ Standalone Quarkiverse extension with optional integrations for Quarkus-Flow, Ca
     <module>testing</module>
     <module>work-flow</module>
     <module>quarkus-work-ledger</module>
+    <module>quarkus-work-notifications</module>
     <module>quarkus-work-queues</module>
     <module>quarkus-work-queues-examples</module>
     <module>quarkus-work-queues-dashboard</module>

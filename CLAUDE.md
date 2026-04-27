@@ -166,7 +166,13 @@ quarkus-work/
   - `service/`: `WorkItemExpressionEvaluator` SPI, `ExpressionDescriptor`, `JexlConditionEvaluator`, `JqConditionEvaluator`, `WorkItemFilterBean`, `FilterEngine`, `FilterEngineImpl`, `FilterEvaluationObserver`
 - `quarkus-work-ai/` — AI-native features; `LowConfidenceFilterProducer` wires confidence-gating into `FilterRegistryEngine`; `SemanticWorkerSelectionStrategy` (@Alternative @Priority(1)) for embedding-based worker scoring; depends on `quarkus-work-core`
   - `skill/`: `WorkerSkillProfile` entity (V14 migration), `WorkerSkillProfileResource` (/worker-skill-profiles), `SemanticWorkerSelectionStrategy` (@Alternative @Priority(1) — auto-activates when module on classpath), `EmbeddingSkillMatcher` (cosine similarity via dev.langchain4j), `WorkerProfileSkillProfileProvider` (default, DB-backed), `CapabilitiesSkillProfileProvider` (@Alternative — joins capability tags), `ResolutionHistorySkillProfileProvider` (@Alternative — aggregates completion history)
-- `quarkus-work-examples/` — runnable scenario demos; 4 `@QuarkusTest` scenarios covering every ledger/audit capability, each runs via `POST /examples/{name}/run`
+- `quarkus-work-notifications/` — optional outbound notification module. CDI observer fires after successful WorkItem lifecycle events and dispatches to configured channels. Flyway V3000.
+  - `model/`: `WorkItemNotificationRule` entity — channelType, targetUrl, eventTypes (comma-sep), category (nullable = wildcard), secret (HMAC), enabled
+  - `api/`: `NotificationRuleResource` (CRUD at `/workitem-notification-rules`)
+  - `service/`: `NotificationDispatcher` — AFTER_SUCCESS CDI observer, async delivery via virtual threads, rule matching by eventType + category
+  - `channel/`: `HttpWebhookChannel` (HMAC-SHA256 signing), `SlackNotificationChannel` (Incoming Webhooks), `TeamsNotificationChannel` (Adaptive Cards)
+  - SPIs in `quarkus-work-api`: `NotificationChannel` (channelType + send), `NotificationPayload` — custom channels implement `NotificationChannel` as `@ApplicationScoped` CDI bean
+- `quarkus-work-examples/` — runnable scenario demos; covers ledger/audit, spawn, business-hours, each runs via `POST /examples/{name}/run`
 - `integration-tests/` — `@QuarkusIntegrationTest` suite and native image validation (19 tests, 0.084s native startup)
 
 **Future integration modules (not yet scaffolded):**
@@ -276,7 +282,7 @@ JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home
 | Priority | # | Epic | Status | First child |
 |---|---|---|---|---|
 | 1 | #101 | Business-Hours Deadlines — SLA in working hours | **active** | BusinessCalendar SPI |
-| 2 | #103 | Notifications — Slack/Teams/email/webhook on lifecycle events | **active** | quarkus-work-notifications module |
+| 2 | #103 | Notifications — Slack/Teams/webhook on lifecycle events | ✅ complete | #140 ✅ SPI+dispatcher+CRUD, #141 ✅ HTTP/Slack/Teams channels |
 | 3 | #104 | SLA Compliance Reporting — breach rates, actor performance | **active** | GET /workitems/reports/sla-breaches |
 | 4 | #106 | Multi-Instance Tasks — M-of-N parallel completion | **active** (design needed — may be CaseHub concern) | — |
 | — | #92 | Distributed WorkItems — clustering + federation | future | #93 (SSE) implementable now |
