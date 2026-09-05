@@ -1,13 +1,12 @@
 # work Workspace
 
 **Name:** casehub-work
-**Project repo:** /Users/mdproctor/claude/casehub/work
+**Project repo:** proj/
 **Workspace type:** public
 
 
 ## Session Start
 
-Run `add-dir /Users/mdproctor/claude/casehub/work` before any other work.
 
 ## Artifacts
 
