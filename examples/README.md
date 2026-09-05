@@ -40,6 +40,9 @@ Quarkus starts on `http://localhost:8080`. All 17 scenarios are ready immediatel
 | 15 | Queue Module | `POST /examples/queues/run` | Label-pattern specialist queues with soft-claim handoff — pickup, relinquish, and senior takeover without force-reassignment |
 | 16 | Subprocess Spawning | `POST /examples/spawn/run` | Parent WorkItem spawns parallel child WorkItems (credit-check, fraud-check, compliance-check), each with a distinct `callerRef` for orchestrator routing |
 | 17 | Vocabulary Registration | `POST /examples/vocabulary/run` | Register a standard label vocabulary before creating WorkItems, ensuring consistent category naming across all work requests |
+| 18 | Expense Compensation | `POST /examples/compensation/run` | Full compensation lifecycle — create, approve, trigger compensation, different actor reverses, auto-COMPENSATED. Audit trail for both original and compensating WorkItems |
+| 19 | Loan Rollback | `POST /examples/loan-rollback/run` | Multi-step reverse-order compensation — 3 callerRef-correlated WorkItems compensated in dependency-reverse order with observable intermediate COMPENSATING state |
+| 20 | Compensation Resilience | `POST /examples/compensation-resilience/run` | All 3 compensation guards (non-COMPLETED, double-compensation, compensator rejection) plus suspend/resume lifecycle on compensating WorkItem |
 
 ## Running All Scenarios in Sequence
 
@@ -61,6 +64,9 @@ curl -s -X POST http://localhost:8080/examples/business-hours/run | jq '.scenari
 curl -s -X POST http://localhost:8080/examples/queues/run | jq '.scenario'
 curl -s -X POST http://localhost:8080/examples/spawn/run | jq '.scenario'
 curl -s -X POST http://localhost:8080/examples/vocabulary/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/compensation/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/loan-rollback/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/compensation-resilience/run | jq '.scenario'
 ```
 
 ## Other Lifecycle Transitions
@@ -89,4 +95,4 @@ Expiry + escalation: set `quarkus.work.default-expiry-hours=0` in
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl examples
 ```
 
-Expected: 30 tests, 0 failures.
+Expected: 33 tests, 0 failures.
