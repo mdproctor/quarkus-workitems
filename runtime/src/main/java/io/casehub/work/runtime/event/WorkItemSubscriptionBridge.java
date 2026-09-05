@@ -38,7 +38,8 @@ public class WorkItemSubscriptionBridge {
             WorkEventType.SPAWNED, WorkEventType.ESCALATED,
             WorkEventType.DEADLINE_EXTENDED, WorkEventType.SLA_REASSIGNED,
             WorkEventType.SLA_EXTENDED, WorkEventType.SIGNAL_RECEIVED,
-            WorkEventType.MANUALLY_ESCALATED, WorkEventType.PROGRESS_UPDATE
+            WorkEventType.MANUALLY_ESCALATED, WorkEventType.PROGRESS_UPDATE,
+            WorkEventType.COMPENSATION_STARTED, WorkEventType.COMPENSATION_COMPLETED
     );
 
     @Inject

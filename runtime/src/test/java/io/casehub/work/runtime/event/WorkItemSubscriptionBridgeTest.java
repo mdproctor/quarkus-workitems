@@ -3,9 +3,9 @@ package io.casehub.work.runtime.event;
 import io.casehub.platform.api.datasource.DataSource;
 import io.casehub.platform.api.datasource.DataSourceRegistry;
 import io.casehub.platform.api.path.Path;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.inject.Instance;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +18,11 @@ import static io.casehub.platform.api.subscription.SubscriptionConstants.NOTIFIC
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class WorkItemSubscriptionBridgeTest {
 
@@ -63,6 +67,27 @@ class WorkItemSubscriptionBridgeTest {
 
         bridge.onWorkItemEvent(sampleEvent("ASSIGNED"));
     }
+
+    @Test
+    void emittedEventTypes_includesCompensationTypes() {
+        var eventRegistry = mock(io.casehub.platform.api.subscription.EventTypeRegistry.class);
+        var bridge        = new WorkItemSubscriptionBridge();
+        setField(bridge, "dataSourceRegistryInstance", unsatisfiedInstance());
+        setField(bridge, "eventTypeRegistryInstance", satisfiedInstance(eventRegistry));
+
+        bridge.onStartup(mock(io.quarkus.runtime.StartupEvent.class));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(
+                io.casehub.platform.api.subscription.EventTypeDescriptor.class);
+        verify(eventRegistry, atLeastOnce()).register(captor.capture());
+        var registeredTypes = captor.getAllValues().stream()
+                                    .map(io.casehub.platform.api.subscription.EventTypeDescriptor::eventType)
+                                    .toList();
+        assertThat(registeredTypes).contains(
+                "io.casehub.work.workitem.compensation_started",
+                "io.casehub.work.workitem.compensation_completed");
+    }
+
 
     private WorkItemLifecycleEvent sampleEvent(final String name) {
         var wi = WorkItem.builder()
