@@ -6,11 +6,13 @@ import io.casehub.platform.api.preferences.Preferences;
 import io.casehub.platform.api.preferences.SettingsScope;
 import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.AssignmentTrigger;
+import io.casehub.work.api.CompensationStatus;
 import io.casehub.work.api.ClaimSlaContext;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.PolicyDecision;
 import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.api.WorkItemStatus;
@@ -22,7 +24,6 @@ import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.core.strategy.CapabilityValidator;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
-import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
@@ -194,6 +195,7 @@ public class WorkItemService implements WorkItemOperations {
                                                                         .resolutionTypeName(request.resolutionTypeName)
                                                                         .candidateScores(request.candidateScores)
                                                                         .routingExperiences(request.routingExperiences)
+                                                                        .originRef(request.originRef)
                                                                         .createdAt(now)
                                                                         .updatedAt(now)
                                                                         .expiresAt(expiresAt)
@@ -765,6 +767,60 @@ public class WorkItemService implements WorkItemOperations {
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason));
         return saved;
     }
+
+    @jakarta.transaction.Transactional
+    public io.casehub.work.api.WorkItem compensate(final UUID originalId,
+                                                   final WorkItemCreateRequest request,
+                                                   final String triggeredBy,
+                                                   final String reason) {
+        final io.casehub.work.api.WorkItem original = requireWorkItem(originalId);
+
+        if (original.status() != WorkItemStatus.COMPLETED) {
+            throw new IllegalStateException(
+                    "Only COMPLETED WorkItems can be compensated; current status: " + original.status());
+        }
+        if (original.compensationStatus() != null
+            && original.compensationStatus() != CompensationStatus.NONE) {
+            throw new IllegalStateException(
+                    "WorkItem already has compensation activity: " + original.compensationStatus());
+        }
+        if (original.compensatesWorkItemId() != null) {
+            throw new IllegalStateException(
+                    "Compensating WorkItems cannot themselves be compensated");
+        }
+
+        final io.casehub.work.api.WorkItem updatedOriginal = original.toBuilder()
+                                                                     .compensationStatus(CompensationStatus.COMPENSATING)
+                                                                     .build();
+        workItemStore.put(updatedOriginal);
+        audit(originalId, "COMPENSATION_STARTED", triggeredBy, reason);
+
+        final io.casehub.work.api.WorkItem compensating = create(request);
+
+        final io.casehub.work.api.WorkItem linked = compensating.toBuilder()
+                                                                .compensatesWorkItemId(originalId)
+                                                                .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(linked);
+
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("COMPENSATION_STARTED",
+                                                        updatedOriginal, triggeredBy, reason));
+
+        return saved;
+    }
+
+    @jakarta.transaction.Transactional
+    public io.casehub.work.api.WorkItem markCompensated(final UUID originalId) {
+        final io.casehub.work.api.WorkItem original = requireWorkItem(originalId);
+        final io.casehub.work.api.WorkItem updated = original.toBuilder()
+                                                             .compensationStatus(CompensationStatus.COMPENSATED)
+                                                             .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        audit(originalId, "COMPENSATION_COMPLETED", "system", "Compensating WorkItem completed");
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("COMPENSATION_COMPLETED",
+                                                        saved, "system", null));
+        return saved;
+    }
+
 
     @Transactional
     public io.casehub.work.api.WorkItem extend(final UUID id, final Instant newExpiresAt, final String actorId) {

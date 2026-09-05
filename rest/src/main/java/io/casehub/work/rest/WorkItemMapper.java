@@ -36,7 +36,9 @@ public final class WorkItemMapper {
                 wi.excludedUsers(),
                 wi.scope(),
                 wi.candidateScores(),
-                wi.routingExperiences());
+                wi.routingExperiences(),
+                wi.compensationStatus(),
+                wi.compensatesWorkItemId());
     }
 
     static Long entityVersion(final java.util.UUID id) {
@@ -75,7 +77,9 @@ public final class WorkItemMapper {
                 wi.excludedUsers(),
                 wi.scope(),
                 wi.candidateScores(),
-                wi.routingExperiences());
+                wi.routingExperiences(),
+                wi.compensationStatus(),
+                wi.compensatesWorkItemId());
     }
 
     public static WorkItemCreateRequest toServiceRequest(final CreateWorkItemRequest req) {

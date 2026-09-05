@@ -1,23 +1,23 @@
 package io.casehub.work.api;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class WorkEventTypeTest {
 
     @Test
     void allExpectedValuesExist() {
         assertThat(WorkEventType.values()).extracting(Enum::name)
-                .containsExactlyInAnyOrder(
-                        "CREATED", "ASSIGNED", "STARTED", "COMPLETED", "REJECTED", "FAULTED",
-                        "DELEGATED", "DELEGATION_ACCEPTED", "DELEGATION_DECLINED", "RELEASED",
-                        "SUSPENDED", "RESUMED", "CANCELLED", "OBSOLETE", "EXPIRED", "CLAIM_EXPIRED",
-                        "SPAWNED", "ESCALATED", "DEADLINE_EXTENDED", "SLA_REASSIGNED", "SLA_EXTENDED",
-                        "SIGNAL_RECEIVED", "MANUALLY_ESCALATED", "PROGRESS_UPDATE", "LABEL_ADDED", "LABEL_REMOVED");
-    }
+                                          .containsExactlyInAnyOrder(
+                                                  "CREATED", "ASSIGNED", "STARTED", "COMPLETED", "REJECTED", "FAULTED",
+                                                  "DELEGATED", "DELEGATION_ACCEPTED", "DELEGATION_DECLINED", "RELEASED",
+                                                  "SUSPENDED", "RESUMED", "CANCELLED", "OBSOLETE", "EXPIRED", "CLAIM_EXPIRED",
+                                                  "SPAWNED", "ESCALATED", "DEADLINE_EXTENDED", "SLA_REASSIGNED", "SLA_EXTENDED",
+                                                  "SIGNAL_RECEIVED", "MANUALLY_ESCALATED", "PROGRESS_UPDATE", "LABEL_ADDED", "LABEL_REMOVED",
+                                                  "COMPENSATION_STARTED", "COMPENSATION_COMPLETED");}
 
     @Test
     void faulted_isAccessible() {

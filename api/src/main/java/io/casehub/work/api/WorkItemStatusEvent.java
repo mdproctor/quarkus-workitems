@@ -18,5 +18,6 @@ public record WorkItemStatusEvent(
     String candidateGroups,
     String outcome,
     String tenancyId,
-    Instant occurredAt
+    Instant occurredAt,
+    String originRef
 ) {}

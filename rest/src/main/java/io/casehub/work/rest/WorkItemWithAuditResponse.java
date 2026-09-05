@@ -7,6 +7,7 @@ import java.util.UUID;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.Outcome;
 import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.CompensationStatus;
 import io.casehub.work.api.WorkItemStatus;
 
 public record WorkItemWithAuditResponse(
@@ -65,5 +66,7 @@ public record WorkItemWithAuditResponse(
         String excludedUsers,
         String scope,
         String candidateScores,
-        String routingExperiences) {
+        String routingExperiences,
+        CompensationStatus compensationStatus,
+        UUID compensatesWorkItemId) {
 }

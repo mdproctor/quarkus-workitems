@@ -1,26 +1,26 @@
 package io.casehub.work.rest;
 
 import io.casehub.platform.api.identity.CurrentPrincipal;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
-import io.casehub.work.api.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemLifecycleEvent;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.WorkItemRootView;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.WorkItemSummary;
+import io.casehub.work.api.spi.WorkItemOperations;
+import io.casehub.work.api.spi.WorkItemStore;
+import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
+import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItemLink;
 import io.casehub.work.runtime.model.WorkItemNote;
 import io.casehub.work.runtime.model.WorkItemRelationType;
-import io.casehub.work.api.WorkItemRootView;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.WorkItemLinkStore;
 import io.casehub.work.runtime.repository.WorkItemNoteStore;
-import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemRelationStore;
-import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.LabelNotFoundException;
 import io.casehub.work.runtime.service.WorkItemNotFoundException;
-import io.casehub.work.api.spi.WorkItemOperations;
-import io.casehub.work.api.WorkItemSummary;
 import io.smallrye.mutiny.Multi;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -94,6 +94,34 @@ public class WorkItemResource {
 
     public record AddLabelRequest(String path, String appliedBy) {
     }
+
+    public record CompensateRequest(String title, String candidateGroups, String actor, String reason) {}
+
+    @POST
+    @Path("/{id}/compensate")
+    @Consumes(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+    public Response compensate(@jakarta.ws.rs.PathParam("id") final UUID id,
+                               final CompensateRequest request) {
+        try {
+            final io.casehub.work.api.WorkItem compensating = workItemService.compensate(
+                    id,
+                    io.casehub.work.api.WorkItemCreateRequest.builder()
+                                                             .title(request.title())
+                                                             .candidateGroups(request.candidateGroups())
+                                                             .createdBy(request.actor())
+                                                             .build(),
+                    request.actor(),
+                    request.reason());
+            return Response.status(Response.Status.CREATED)
+                           .entity(WorkItemMapper.toResponse(compensating))
+                           .build();
+        } catch (IllegalStateException e) {
+            return Response.status(Response.Status.CONFLICT)
+                           .entity(java.util.Map.of("error", e.getMessage()))
+                           .build();
+        }
+    }
+
 
     @GET
     public List<WorkItemResponse> listAll(

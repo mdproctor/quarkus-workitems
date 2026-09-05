@@ -44,5 +44,9 @@ public enum WorkEventType {
     /** A label was added to the WorkItem. */
     LABEL_ADDED,
     /** A label was removed from the WorkItem. */
-    LABEL_REMOVED
+    LABEL_REMOVED,
+    /** A compensating WorkItem was created; original marked COMPENSATING. */
+    COMPENSATION_STARTED,
+    /** The compensating WorkItem completed; original marked COMPENSATED. */
+    COMPENSATION_COMPLETED
 }

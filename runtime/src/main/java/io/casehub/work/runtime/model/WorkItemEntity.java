@@ -1,5 +1,6 @@
 package io.casehub.work.runtime.model;
 
+import io.casehub.work.api.CompensationStatus;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.CollectionTable;
@@ -377,6 +378,15 @@ public class WorkItemEntity extends PanacheEntityBase {
 
     @Column(name = "escalation_generate_summary")
     public Boolean escalationGenerateSummary;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "compensation_status")
+    public CompensationStatus compensationStatus = CompensationStatus.NONE;
+
+    @Column(name = "compensates_work_item_id")
+    public UUID compensatesWorkItemId;
+
+    @Column(name = "origin_ref")
+    public String originRef;
 
 
     // -------------------------------------------------------------------------

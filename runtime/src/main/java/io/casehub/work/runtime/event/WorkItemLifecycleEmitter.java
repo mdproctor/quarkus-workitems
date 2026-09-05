@@ -54,6 +54,7 @@ public class WorkItemLifecycleEmitter {
                 event.eventType(), event.workItemId(), event.status(),
                 event.actor(), event.detail(), event.callerRef(),
                 event.assigneeId(), event.candidateGroups(), event.outcome(),
-                event.tenancyId(), event.occurredAt());
+                event.tenancyId(), event.occurredAt(),
+                event.workItem() != null ? event.workItem().originRef() : null);
     }
 }

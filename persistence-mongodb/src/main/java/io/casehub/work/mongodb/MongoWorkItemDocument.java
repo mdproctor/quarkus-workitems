@@ -1,5 +1,6 @@
 package io.casehub.work.mongodb;
 
+import io.casehub.work.api.CompensationStatus;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.WorkItemPriority;
@@ -78,6 +79,8 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     public String originServiceId;
     public String originWorkItemId;
     public Long   originVersion;
+    public String compensationStatus;
+    public String compensatesWorkItemId;
 
 
     /** Embedded label document. */
@@ -133,6 +136,8 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         doc.originServiceId             = wi.originServiceId();
         doc.originWorkItemId            = wi.originWorkItemId() != null ? wi.originWorkItemId().toString() : null;
         doc.originVersion               = wi.originVersion();
+        doc.compensationStatus          = wi.compensationStatus() != null ? wi.compensationStatus().name() : null;
+        doc.compensatesWorkItemId       = wi.compensatesWorkItemId() != null ? wi.compensatesWorkItemId().toString() : null;
         if (wi.labels() != null) {
             doc.labels = wi.labels().stream().map(l -> {
                 final MongoLabel ml = new MongoLabel();
@@ -192,6 +197,8 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
                                            .originServiceId(originServiceId)
                                            .originWorkItemId(originWorkItemId != null ? UUID.fromString(originWorkItemId) : null)
                                            .originVersion(originVersion)
+                                           .compensationStatus(compensationStatus != null ? CompensationStatus.valueOf(compensationStatus) : CompensationStatus.NONE)
+                                           .compensatesWorkItemId(compensatesWorkItemId != null ? UUID.fromString(compensatesWorkItemId) : null)
                                            .labels(labels != null ? labels.stream().map(ml ->
                                                                                                 new io.casehub.work.api.WorkItemLabel(ml.path,
                                                                                                                                       ml.persistence != null ? LabelPersistence.valueOf(ml.persistence) : null,

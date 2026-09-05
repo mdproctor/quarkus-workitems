@@ -303,10 +303,11 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
         if (workItem != null) {
             return new WorkItemRef(workItemId, status, workItem.callerRef(), workItem.assigneeId(),
                                    workItem.resolution(), workItem.candidateGroups(), outcome, tenancyId,
-                                   workItem.payload(), workItem.payloadTypeName(), workItem.resolutionTypeName());
+                                   workItem.payload(), workItem.payloadTypeName(), workItem.resolutionTypeName(),
+                                   workItem.originRef());
         }
         return new WorkItemRef(workItemId, status, callerRef, assigneeId,
-                               resolution, candidateGroups, outcome, tenancyId, null, null, null);
+                               resolution, candidateGroups, outcome, tenancyId, null, null, null, null);
     }
 
     @JsonIgnore

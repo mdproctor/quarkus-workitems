@@ -82,6 +82,8 @@ public final class WorkItemContextBuilder {
         map.put("escalationOnClaimDeadline", workItem.escalationOnClaimDeadline());
         map.put("escalationDeadline", workItem.escalationDeadline());
         map.put("escalationGenerateSummary", workItem.escalationGenerateSummary());
+        map.put("compensationStatus", workItem.compensationStatus() != null ? workItem.compensationStatus().name() : "NONE");
+        map.put("compensatesWorkItemId", workItem.compensatesWorkItemId());
         return map;
     }
 }

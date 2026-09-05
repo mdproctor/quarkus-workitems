@@ -13,5 +13,6 @@ public record WorkItemRef(
     String tenancyId,
     String payload,
     String payloadTypeName,
-    String resolutionTypeName
+    String resolutionTypeName,
+    String originRef
 ) {}

@@ -1,5 +1,6 @@
 package io.casehub.work.runtime.repository;
 
+import io.casehub.work.api.CompensationStatus;
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemLabel;
 import io.casehub.work.runtime.model.WorkItemEntity;
@@ -74,6 +75,9 @@ public final class WorkItemEntityMapper {
                        .escalationOnClaimDeadline(entity.escalationOnClaimDeadline)
                        .escalationDeadline(entity.escalationDeadline)
                        .escalationGenerateSummary(entity.escalationGenerateSummary)
+                       .compensationStatus(entity.compensationStatus != null ? entity.compensationStatus : CompensationStatus.NONE)
+                       .compensatesWorkItemId(entity.compensatesWorkItemId)
+                       .originRef(entity.originRef)
                        .build();}
 
     public static WorkItemEntity toEntity(WorkItem domain) {
@@ -143,5 +147,8 @@ public final class WorkItemEntityMapper {
         entity.escalationOnExpiry          = domain.escalationOnExpiry();
         entity.escalationOnClaimDeadline   = domain.escalationOnClaimDeadline();
         entity.escalationDeadline          = domain.escalationDeadline();
-        entity.escalationGenerateSummary   = domain.escalationGenerateSummary();}
+        entity.escalationGenerateSummary   = domain.escalationGenerateSummary();
+        entity.compensationStatus          = domain.compensationStatus() != null ? domain.compensationStatus() : CompensationStatus.NONE;
+        entity.compensatesWorkItemId       = domain.compensatesWorkItemId();
+        entity.originRef                   = domain.originRef();}
 }

@@ -75,4 +75,9 @@ public interface WorkItemOperations {
     Optional<WorkItem> findByCallerRef(String callerRef);
 
     Optional<WorkItem> findActiveByCallerRef(String callerRef);
+
+    WorkItem compensate(UUID originalId, WorkItemCreateRequest request, String triggeredBy, String reason);
+
+    WorkItem markCompensated(UUID originalId);
+
 }

@@ -61,7 +61,10 @@ public record WorkItem(
         String escalationOnExpiry,
         String escalationOnClaimDeadline,
         String escalationDeadline,
-        Boolean escalationGenerateSummary
+        Boolean escalationGenerateSummary,
+        CompensationStatus compensationStatus,
+        UUID compensatesWorkItemId,
+        String originRef
 ) {
 
     public WorkItem {
@@ -101,7 +104,10 @@ public record WorkItem(
                        .escalationOnExpiry(escalationOnExpiry)
                        .escalationOnClaimDeadline(escalationOnClaimDeadline)
                        .escalationDeadline(escalationDeadline)
-                       .escalationGenerateSummary(escalationGenerateSummary);
+                       .escalationGenerateSummary(escalationGenerateSummary)
+                       .compensationStatus(compensationStatus)
+                       .compensatesWorkItemId(compensatesWorkItemId)
+                       .originRef(originRef);
     }
 
     public static final class Builder {
@@ -159,6 +165,9 @@ public record WorkItem(
         private String              escalationOnClaimDeadline;
         private String              escalationDeadline;
         private Boolean             escalationGenerateSummary;
+        private CompensationStatus  compensationStatus;
+        private UUID                compensatesWorkItemId;
+        private String              originRef;
 
         public Builder id(UUID v)                               {
                                                                     this.id = v;
@@ -414,6 +423,9 @@ public record WorkItem(
         public Builder escalationOnClaimDeadline(String v)      { this.escalationOnClaimDeadline = v; return this; }
         public Builder escalationDeadline(String v)             { this.escalationDeadline = v; return this; }
         public Builder escalationGenerateSummary(Boolean v)     { this.escalationGenerateSummary = v; return this; }
+        public Builder compensationStatus(CompensationStatus v) { this.compensationStatus = v; return this; }
+        public Builder compensatesWorkItemId(UUID v)          { this.compensatesWorkItemId = v; return this; }
+        public Builder originRef(String v)                    { this.originRef = v; return this; }
 
         public WorkItem build() {
             return new WorkItem(
@@ -431,7 +443,8 @@ public record WorkItem(
                     candidateScores, routingExperiences, version,
                     originServiceId, originWorkItemId, originVersion,
                     escalationOnExpiry, escalationOnClaimDeadline,
-                    escalationDeadline, escalationGenerateSummary);
+                    escalationDeadline, escalationGenerateSummary,
+                    compensationStatus, compensatesWorkItemId, originRef);
         }
     }
 }

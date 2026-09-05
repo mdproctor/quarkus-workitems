@@ -7,6 +7,7 @@ import java.util.UUID;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.Outcome;
 import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.CompensationStatus;
 import io.casehub.work.api.WorkItemStatus;
 
 public record WorkItemResponse(
@@ -87,5 +88,7 @@ public record WorkItemResponse(
         /** Hierarchical scope path e.g. {@code "casehubio/devtown/pr-review"}; null = root scope. */
         String scope,
         String candidateScores,
-        String routingExperiences) {
+        String routingExperiences,
+        CompensationStatus compensationStatus,
+        UUID compensatesWorkItemId) {
 }

@@ -4,6 +4,7 @@ import io.casehub.platform.api.preferences.MapPreferences;
 import io.casehub.platform.expression.DefaultExpressionEngineRegistry;
 import io.casehub.platform.expression.JexlExpressionEngine;
 import io.casehub.work.api.AssignmentDecision;
+import io.casehub.work.api.CompensationStatus;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.PolicyDecision;
@@ -12,15 +13,14 @@ import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemLabelRequest;
 import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.core.strategy.CapabilityValidator;
-
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.api.WorkItemQuery;
-import io.casehub.work.api.spi.WorkItemStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -1696,4 +1696,98 @@ class WorkItemServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+
+// -------------------------------------------------------------------------
+// Compensation
+// -------------------------------------------------------------------------
+
+    private WorkItem createCompletedWorkItem() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        return service.complete(wi.id(), "alice", "Done", null);
+    }
+
+    @Test
+    void compensate_completedWorkItem_createsCompensatingWorkItem() {
+        WorkItem original = createCompletedWorkItem();
+        WorkItemCreateRequest compReq = WorkItemCreateRequest.builder()
+                                                             .title("Reverse: " + original.title())
+                                                             .candidateGroups("reviewers")
+                                                             .createdBy("operator-1")
+                                                             .tenancyId("test-tenant")
+                                                             .build();
+
+        WorkItem compensating = service.compensate(original.id(), compReq, "operator-1", "Trial withdrawn");
+
+        assertThat(compensating).isNotNull();
+        assertThat(compensating.compensatesWorkItemId()).isEqualTo(original.id());
+        assertThat(compensating.status()).isEqualTo(WorkItemStatus.PENDING);
+
+        WorkItem updatedOriginal = service.findById(original.id()).orElseThrow();
+        assertThat(updatedOriginal.compensationStatus()).isEqualTo(CompensationStatus.COMPENSATING);
+    }
+
+    @Test
+    void compensate_pendingWorkItem_throws() {
+        WorkItem pending = service.create(basicRequest());
+        WorkItemCreateRequest compReq = WorkItemCreateRequest.builder()
+                                                             .title("Compensate").candidateGroups("g").createdBy("op").tenancyId("test-tenant").build();
+
+        assertThatThrownBy(() -> service.compensate(pending.id(), compReq, "op", "reason"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("COMPLETED");
+    }
+
+    @Test
+    void compensate_alreadyCompensating_throws() {
+        WorkItem original = createCompletedWorkItem();
+        WorkItemCreateRequest compReq = WorkItemCreateRequest.builder()
+                                                             .title("Compensate").candidateGroups("g").createdBy("op").tenancyId("test-tenant").build();
+        service.compensate(original.id(), compReq, "op", "reason");
+
+        assertThatThrownBy(() -> service.compensate(original.id(), compReq, "op", "again"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("compensation activity");
+    }
+
+    @Test
+    void compensate_compensatingWorkItem_throws() {
+        WorkItem original = createCompletedWorkItem();
+        WorkItemCreateRequest compReq = WorkItemCreateRequest.builder()
+                                                             .title("Compensate").candidateGroups("g").createdBy("op").tenancyId("test-tenant").build();
+        WorkItem compensating = service.compensate(original.id(), compReq, "op", "reason");
+
+        service.claim(compensating.id(), "bob");
+        service.start(compensating.id(), "bob");
+        service.complete(compensating.id(), "bob", "reversed", null);
+
+        assertThatThrownBy(() -> service.compensate(compensating.id(), compReq, "op", "meta"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Compensating WorkItems cannot");
+    }
+
+    @Test
+    void markCompensated_setsStatusToCompensated() {
+        WorkItem original = createCompletedWorkItem();
+        WorkItemCreateRequest compReq = WorkItemCreateRequest.builder()
+                                                             .title("Compensate").candidateGroups("g").createdBy("op").tenancyId("test-tenant").build();
+        service.compensate(original.id(), compReq, "op", "reason");
+
+        service.markCompensated(original.id());
+
+        WorkItem updated = service.findById(original.id()).orElseThrow();
+        assertThat(updated.compensationStatus()).isEqualTo(CompensationStatus.COMPENSATED);
+    }
+
+    @Test
+    void compensate_writesAuditEntry() {
+        WorkItem original = createCompletedWorkItem();
+        WorkItemCreateRequest compReq = WorkItemCreateRequest.builder()
+                                                             .title("Compensate").candidateGroups("g").createdBy("op").tenancyId("test-tenant").build();
+        service.compensate(original.id(), compReq, "op", "trial withdrawn");
+
+        List<AuditEntry> trail = auditStore.findByWorkItemId(original.id());
+        assertThat(trail).anyMatch(e -> e.event.equals("COMPENSATION_STARTED"));
+    }
 }

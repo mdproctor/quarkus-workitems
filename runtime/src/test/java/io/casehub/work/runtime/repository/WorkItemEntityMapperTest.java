@@ -234,6 +234,7 @@ class WorkItemEntityMapperTest {
                 .payloadTypeName("ptn").resolutionTypeName("rtn")
                 .candidateScores("cs").routingExperiences("re")
                 .version(0L)
+                .compensationStatus(CompensationStatus.NONE)
                 .build();
 
         WorkItemEntity entity = WorkItemEntityMapper.toEntity(original);

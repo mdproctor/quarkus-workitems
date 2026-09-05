@@ -55,6 +55,7 @@ public final class WorkItemCreateRequest {
     public final String escalationOnClaimDeadline;
     public final String escalationDeadline;
     public final Boolean escalationGenerateSummary;
+    public final String originRef;
 
 
     private WorkItemCreateRequest(final Builder b) {
@@ -96,6 +97,7 @@ public final class WorkItemCreateRequest {
         this.escalationOnClaimDeadline  = b.escalationOnClaimDeadline;
         this.escalationDeadline         = b.escalationDeadline;
         this.escalationGenerateSummary  = b.escalationGenerateSummary;
+        this.originRef                  = b.originRef;
     }
 
     public static Builder builder() {
@@ -213,6 +215,7 @@ public final class WorkItemCreateRequest {
         private String escalationOnClaimDeadline;
         private String escalationDeadline;
         private Boolean escalationGenerateSummary;
+        private String originRef;
 
 
         private Builder() {}
@@ -256,6 +259,7 @@ public final class WorkItemCreateRequest {
             this.escalationOnClaimDeadline  = src.escalationOnClaimDeadline;
             this.escalationDeadline         = src.escalationDeadline;
             this.escalationGenerateSummary  = src.escalationGenerateSummary;
+            this.originRef                  = src.originRef;
         }
 
         public Builder title(final String v)                          { this.title = v; return this; }
@@ -305,6 +309,7 @@ public final class WorkItemCreateRequest {
         public Builder escalationOnClaimDeadline(final String v)   { this.escalationOnClaimDeadline = v; return this; }
         public Builder escalationDeadline(final String v)          { this.escalationDeadline = v; return this; }
         public Builder escalationGenerateSummary(final Boolean v)  { this.escalationGenerateSummary = v; return this; }
+        public Builder originRef(final String v)                   { this.originRef = v; return this; }
 
 
         public WorkItemCreateRequest build() {
