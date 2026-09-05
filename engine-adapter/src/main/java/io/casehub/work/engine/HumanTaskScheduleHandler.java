@@ -60,6 +60,7 @@ import org.jboss.logging.Logger;
  * Refs engine#245, work#298.
  */
 @ApplicationScoped
+@SuppressWarnings("removal")
 public class HumanTaskScheduleHandler implements HumanTaskScheduler {
 
   private static final Logger LOG = Logger.getLogger(HumanTaskScheduleHandler.class);

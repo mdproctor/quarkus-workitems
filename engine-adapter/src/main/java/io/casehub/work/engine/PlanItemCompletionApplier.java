@@ -24,7 +24,6 @@ import io.casehub.api.model.CapabilityTarget;
 import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.ConflictResolver;
 import io.casehub.api.model.ExtensionTarget;
-import io.casehub.api.model.HumanTaskTarget;
 import io.casehub.api.model.JudgmentTarget;
 import io.casehub.api.model.SignalTarget;
 import io.casehub.api.model.SubCaseTarget;
@@ -134,6 +133,11 @@ public class PlanItemCompletionApplier {
         applyOutputMapping(item, ref, instance);
 
         final String bindingName = item.getBindingName();
+        if (status == WorkItemStatus.COMPLETED) {
+            planItemStateChangedEvents.fireAsync(
+                    new PlanItemStateChangedEvent(caseId, planItemId, bindingName,
+                                                  previousStatus, TaskStatus.COMPLETED, instance.tenancyId));
+        }
         if (status == WorkItemStatus.REJECTED) {
             planItemStateChangedEvents.fireAsync(
                     new PlanItemStateChangedEvent(caseId, planItemId, bindingName,
@@ -185,23 +189,17 @@ public class PlanItemCompletionApplier {
     private void applyOutputMapping(PlanItem item, WorkItemRef ref, CaseInstance instance) {
         if (instance.getCaseContext() == null) {return;}
         if (item.getTarget() == null) {return;}
-        HumanTaskTarget ht =
-                switch (item.getTarget()) {
-                    case HumanTaskTarget humanTaskTarget -> humanTaskTarget;
-                    case CapabilityTarget ignored -> null;
-                    case SubCaseTarget ignored -> null;
-                    case ExtensionTarget ignored -> null;
-                    case SignalTarget ignored -> null;
-                    case JudgmentTarget ignored -> null;
-                };
-        if (ht == null) {return;}
-        if (ht.outputMapping() == null) {return;}
+        io.casehub.platform.api.expression.ExpressionEvaluator outputMapping = null;
+        if (item.getTarget() instanceof JudgmentTarget jt) {
+            outputMapping = jt.outputMapping();
+        }
+        if (outputMapping == null) {return;}
         if (ref == null) {return;}
 
-        if (!(ht.outputMapping() instanceof JQExpressionEvaluator jq)) {
+        if (!(outputMapping instanceof JQExpressionEvaluator jq)) {
             LOG.warnf(
                     "Unsupported outputMapping evaluator type '%s' for PlanItem %s — skipping",
-                    ht.outputMapping().getClass().getName(), item.getPlanItemId());
+                    outputMapping.getClass().getName(), item.getPlanItemId());
             return;
         }
 

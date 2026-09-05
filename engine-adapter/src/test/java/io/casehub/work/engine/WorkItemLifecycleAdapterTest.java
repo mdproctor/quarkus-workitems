@@ -332,8 +332,8 @@ class WorkItemLifecycleAdapterTest {
 
   @Test
   void workItemCompleted_withOutputMapping_updatesCaseContext() {
-    HumanTaskTarget target =
-        HumanTaskTarget.inline().title("Review").outputMapping("{ irbOutcome: .decision }").build();
+    io.casehub.api.model.JudgmentTarget target =
+        io.casehub.api.model.JudgmentTarget.builder().prompt("Review").title("Review").outputMapping("{ irbOutcome: .decision }").build();
     PlanItem htPlanItem = PlanItem.create("review-binding-ht", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10, target);
     htPlanItem.markRunning();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(htPlanItem);
@@ -367,8 +367,8 @@ class WorkItemLifecycleAdapterTest {
   @Test
   void workItemCompleted_withFailingOutputMapping_planItemStillCompletes() {
     // outputMapping evaluator with invalid expression — should warn, not fail the transition
-    HumanTaskTarget target =
-        HumanTaskTarget.inline().title("Review").outputMapping("not-a-valid-template").build();
+    io.casehub.api.model.JudgmentTarget target =
+        io.casehub.api.model.JudgmentTarget.builder().prompt("Review").title("Review").outputMapping("not-a-valid-template").build();
     PlanItem htPlanItem = PlanItem.create("review-binding-fail", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10, target);
     htPlanItem.markRunning();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(htPlanItem);
@@ -392,8 +392,9 @@ class WorkItemLifecycleAdapterTest {
   @Test
   void workItemCompleted_withNestedOutputMapping_producesNestedMap() {
     // engine#314: { outer: { inner: .path } } must produce a nested Map, not a String literal
-    HumanTaskTarget target =
-        HumanTaskTarget.inline()
+    io.casehub.api.model.JudgmentTarget target =
+        io.casehub.api.model.JudgmentTarget.builder()
+            .prompt("Approval")
             .title("Approval")
             .outputMapping("{ humanApproval: { status: .decision } }")
             .build();

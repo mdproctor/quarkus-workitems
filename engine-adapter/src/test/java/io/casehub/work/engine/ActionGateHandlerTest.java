@@ -82,7 +82,8 @@ class ActionGateHandlerTest {
                 wi.tenancyId(),
                 wi.payload(),
                 wi.payloadTypeName(),
-                wi.resolutionTypeName());
+                wi.resolutionTypeName(),
+                wi.originRef());
     }
 
     @BeforeEach

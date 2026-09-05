@@ -80,7 +80,7 @@ class HumanTaskPlannerIntegrationTest {
           .bindings(
               Binding.builder()
                   .name("approval-binding")
-                  .target(HumanTaskTarget.inline().title("Approval Required").build())
+                  .target(io.casehub.api.model.JudgmentTarget.builder().prompt("Approve").title("Approval Required").build())
                   .on(new ContextChangeTrigger(".status == \"pending\""))
                   .build())
           .build();

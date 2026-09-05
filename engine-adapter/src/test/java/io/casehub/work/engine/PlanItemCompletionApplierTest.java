@@ -17,11 +17,11 @@ package io.casehub.work.engine;
 
 import io.casehub.api.model.HumanTaskTarget;
 import io.casehub.api.model.TaskStatus;
-import io.casehub.engine.planning.plan.PlanItem;
-import io.casehub.engine.planning.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CaseInstanceRepository;
 import io.casehub.engine.internal.context.CaseContextImpl;
+import io.casehub.engine.planning.plan.PlanItem;
+import io.casehub.engine.planning.registry.BlackboardRegistry;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.WorkItemStatus;
 import io.quarkus.test.junit.QuarkusTest;
@@ -51,7 +51,7 @@ class PlanItemCompletionApplierTest {
         caseId = UUID.randomUUID();
         planItem = PlanItem.create("escalation-binding",
                 io.casehub.api.model.ExecutorRef.of("ht-worker"), 10,
-                HumanTaskTarget.inline().title("Review").build());
+                io.casehub.api.model.JudgmentTarget.builder().prompt("Review").title("Review").build());
         planItem.tryMarkDispatching();
         planItem.markDelegated();
         planItemId = planItem.getPlanItemId();
@@ -76,7 +76,7 @@ class PlanItemCompletionApplierTest {
                 workItemId, WorkItemStatus.ESCALATED,
                 PlanItemRef.encode(caseId, planItemId),
                 null, null, "committee-a,committee-b",
-                null, "test-tenant", null, null, null);
+                null, "test-tenant", null, null, null, null);
 
         applier.apply(caseId, planItemId, WorkItemStatus.ESCALATED, ref, null);
 
@@ -107,7 +107,7 @@ class PlanItemCompletionApplierTest {
                 "{\"partial\": \"data\"}",
                 "committee-a",
                 null, "test-tenant", null, null,
-                "io.casehub.SomeResolutionType");
+                "io.casehub.SomeResolutionType", null);
 
         applier.apply(caseId, planItemId, WorkItemStatus.ESCALATED, ref, null);
 
@@ -119,4 +119,19 @@ class PlanItemCompletionApplierTest {
         Object signal = updated.getCaseContext().get("workItemEscalated");
         assertThat(signal).isNotNull();
     }
+
+    @Test
+    void completed_marksPlanItemCompleted() {
+        UUID workItemId = UUID.randomUUID();
+        WorkItemRef ref = new WorkItemRef(
+                workItemId, WorkItemStatus.COMPLETED,
+                PlanItemRef.encode(caseId, planItemId),
+                null, "{\"approved\": true}", null,
+                null, "test-tenant", null, null, null, null);
+
+        applier.apply(caseId, planItemId, WorkItemStatus.COMPLETED, ref, null);
+
+        assertThat(planItem.getStatus()).isEqualTo(TaskStatus.COMPLETED);
+    }
+
 }
