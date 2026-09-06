@@ -185,6 +185,10 @@ Two-way bridge:
 
 `callerRef` format: `case:{caseId}/pi:{planItemId}` (HumanTask) or `case:{caseId}/gate:{gateId}` (ActionGate). Use `CallerRef.parse()` / `PlanItemCallerRef.encode()` / `GateCallerRef.encode()`.
 
+**Inbound work item creation (engine#974):** `InboundWorkItemSchedulerImpl` implements `InboundWorkItemScheduler` SPI (engine-common). Converts `InboundWorkItemRequest` to `WorkItemCreateRequest`, wraps creation in `TenantContextExecutor.runInTenantContext()` (request arrives outside request scope from qhorus afterCompletion callback). Overrides engine's `NoOpInboundWorkItemScheduler` (`@DefaultBean`) when engine-adapter is on the classpath. Priority mapping: String → `WorkItemPriority.valueOf()`, null-safe, fail-fast on invalid values.
+
+**Actor state contribution (engine#974):** `WorkActorStateContributor` implements `ActorStateContributor` (platform-api). Queries `WorkItemStore` for active items (ASSIGNED, IN_PROGRESS, SUSPENDED) by `assigneeId`. Extracts `caseId` from `callerRef` via `CallerRef.parse()` (same module — handles both PlanItemRef and GateRef formats). `sourceName()` returns `"work"`. Relocated from `casehub-engine-actor-state`.
+
 ---
 
 ## qhorus Module
